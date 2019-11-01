@@ -157,11 +157,12 @@ class LRSelectPhoto(LRSelectGeneric):
                     '', \
                     'i.touchtime %s %s', self.func_oper_date_to_lrstamp, \
                     ],
-                # todatemod obsolete replaced by datemod
+                # fromdatemod obsolete replaced by datemod
                 'fromdatemod' : [ \
                     '', \
                     'i.touchtime >= %s', self.func_date_to_lrstamp, \
                     ],
+                # todatemod obsolete replaced by datemod
                 'todatemod' : [ \
                     '', \
                     'i.touchtime <= %s', self.func_date_to_lrstamp, \
@@ -224,8 +225,8 @@ class LRSelectPhoto(LRSelectGeneric):
                     'col.name = "%s"', \
                     ],
                 'metastatus' : [ \
-                    '', \
-                    'i.sidecarStatus = %s', self.func_metastatus, \
+                    ['LEFT JOIN Adobe_AdditionalMetadata am on i.id_local = am.image'], \
+                    '%s', self.func_metastatus, \
                     ],
                 'extfile' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local', \
@@ -259,14 +260,18 @@ class LRSelectPhoto(LRSelectGeneric):
 
     def func_metastatus(self, value):
         ''' specific value for metastatus '''
-        if value == 'conflict':
-            return '1.0'
-        elif value == 'cantsave':
-            return '2.0'
-        elif value == 'other':
-            return '0.0'
+        if value == 'unknown':
+            return 'am.externalXmpIsDirty = 0 AND i.sidecarStatus = 2.0'
+        elif value == 'changedondisk':
+            return 'am.externalXmpIsDirty=1 and (i.sidecarStatus = 2.0 or i.sidecarStatus = 0.0)'
+        elif value == 'hasbeenchanged':
+            return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 1.0'
+        elif value == 'conflict':
+            return 'am.externalXmpIsDirty=1 and i.sidecarStatus = 1.0'
+        elif value == 'uptodate':
+            return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 0.0'
         else:
-            raise LRSelectException('invalid "metastatus" value')
+            raise LRSelectException('invalid "metastatus" value "%s"' % value)
 
     def func_stacks(self, value):
         ''' specific value for photos stack '''
@@ -277,7 +282,7 @@ class LRSelectPhoto(LRSelectGeneric):
         elif value == 'one':
             return 'fsi.image is NULL OR fsi.position=1.0'
         else:
-            raise LRSelectException('invalid "stacks" value')
+            raise LRSelectException('invalid "stacks" value "%s"' % value)
 
     def func_exifindex(self, value):
         '''  specific value for search exif '''
@@ -369,8 +374,23 @@ class LRSelectPhoto(LRSelectGeneric):
                     'one'  = excludes the photos in stacks not at first position
             - 'metastatus' :  metadatas status
                     'conflict' = metadatas different on disk from db
-                    'cantsave' = impossible to save metadatas (video or missing files)
-                    'other' = uptodate, in error, or to write on disk (TODO: which sub status ?)
+                    'changedondisk' = metadata changed externally on disk
+                    'hasbeenchanged' = to be save on disk
+                    'conflict' = metadatas different on disk from db
+                    'uptodate' = uptodate, in error, or to write on disk
+                    'unknown' = write error, phot missing ...
+            return 'am.externalXmpIsDirty = 0 AND i.sidecarStatus = 2.0'
+        elif value == 'changedondisk':
+            return 'am.externalXmpIsDirty=1 and (i.sidecarStatus = 2.0 or i.sidecarStatus = 0.0)'
+        elif value == 'hasbeenchanged':
+            return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 1.0'
+        elif value == 'conflict':
+            return 'am.externalXmpIsDirty=1 and i.sidecarStatus = 1.0'
+        elif value == 'uptodate':
+            return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 0.0'
+        else:
+            raise LRSelectException('invalid "metastatus" value "%s"' % value)
+
             - 'idcollection' : (int) collection id
             - 'collection': (str) collection name
             - 'extfile'   : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
