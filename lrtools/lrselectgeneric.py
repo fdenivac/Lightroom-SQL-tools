@@ -146,10 +146,10 @@ class LRSelectGeneric():
 
     def func_value_or_null(self, value):
         ''' value is a null condition '''
-        value = value.upper()
-        if value == 'NULL':
-            value = "IS NULL"
-        elif value == "!NULL":
+        value = value.lower()
+        if value in ['null', 'false']:
+            value = 'IS NULL'
+        elif value in ['!null', 'true']:
             value = "NOT NULL"
         else:
             value = '= "%s"' % value
@@ -261,12 +261,13 @@ class LRSelectGeneric():
 
         # logging
         log = logging.getLogger()
-        log.info('select_generic("%s" "%s")' % (columns, criters))
+        log.info('select_generic("%s" "%s")', columns, criters)
 
         fields = []
         froms = [self.from_table]
         wheres = []
         sort = ''
+        nb_wheres = {}
         select_type = None
 
         #
@@ -275,6 +276,10 @@ class LRSelectGeneric():
         for keyval in self._to_keys(criters):
             key, value = list(keyval.items())[0]
             value = self.remove_quotes(value)
+            if not key in nb_wheres:
+                nb_wheres[key] = 1
+            else:
+                nb_wheres[key] += 1
             if not key in self.criteria_description:
                 raise LRSelectException('No existent criterion "%s"' %  key)
             criter_desc = self.criteria_description[key]
@@ -296,7 +301,9 @@ class LRSelectGeneric():
                 continue
 
             if _from:
+                _from = [_f.replace('<NUM>', '%s' % nb_wheres[key]) for  _f in _from]
                 self._add_from(_from, froms)
+            _where = _where.replace('<NUM>', '%s' % nb_wheres[key])
             if '%s' in _where:
                 _where = _where % value
             wheres.append(_where)

@@ -75,9 +75,17 @@ class LRSelectPhoto(LRSelectGeneric):
                 }, \
             'keywords': { \
                 True :  \
-                    [   'kw.name', \
-                        [ 'LEFT JOIN AgLibraryKeywordImage kwi ON i.id_local = kwi.image',
-                          'LEFT JOIN AgLibraryKeyword kw ON kw.id_local = kwi.tag'  ] \
+                    [   '(SELECT GROUP_CONCAT(kwdef.name) FROM AgLibraryKeywordImage kwimg JOIN AgLibraryKeyword kwdef ON kwdef.id_local = kwimg.tag'\
+                        ' WHERE kwimg.image=i.id_local) AS keywords', \
+                        None \
+                    ] \
+                }, \
+            'collections': { \
+                True :  \
+                    [   '(SELECT GROUP_CONCAT(col.name) FROM AgLibraryCollection col JOIN  AgLibraryCollectionimage ci ON ci.collection = col.id_local'\
+                        ' WHERE ci.image = i.id_local) AS Collections' \
+                        '', \
+                        None \
                     ] \
                 }, \
 
@@ -220,9 +228,9 @@ class LRSelectPhoto(LRSelectGeneric):
                     'col.id_local = %s', \
                     ],
                 'collection' : [ \
-                    ['LEFT JOIN  AgLibraryCollectionimage ci ON ci.image = i.id_local',
-                     'LEFT JOIN AgLibraryCollection col ON col.id_local = ci.Collection'],\
-                    'col.name = "%s"', \
+                    ['LEFT JOIN  AgLibraryCollectionimage ci<NUM> ON ci<NUM>.image = i.id_local',
+                     'LEFT JOIN AgLibraryCollection col<NUM> ON col<NUM>.id_local = ci<NUM>.Collection'],\
+                    'col<NUM>.name LIKE "%s"', \
                     ],
                 'metastatus' : [ \
                     ['LEFT JOIN Adobe_AdditionalMetadata am on i.id_local = am.image'], \
@@ -237,9 +245,9 @@ class LRSelectPhoto(LRSelectGeneric):
                     'fsi.position %s', self.func_stacks,
                     ],
                 'keyword' : [ \
-                    ['LEFT JOIN AgLibraryKeywordImage kwi ON i.id_local = kwi.image', \
-                    ' LEFT JOIN AgLibraryKeyword kw ON kw.id_local = kwi.tag'], \
-                    'kw.name="%s"',
+                    ['LEFT JOIN AgLibraryKeywordImage kwi<NUM> ON i.id_local = kwi<NUM>.image', \
+                    ' LEFT JOIN AgLibraryKeyword kw<NUM> ON kw<NUM>.id_local = kwi<NUM>.tag'], \
+                    'kw<NUM>.name LIKE"%s"',
                     ],
                 'exifindex' : [ \
                     'LEFT JOIN AgMetadataSearchIndex msi ON i.id_local = msi.image', \
@@ -344,7 +352,8 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'xmp'       : all xmp metadatas
             - 'vname'     : virtual copy name
             - 'stackpos'  : position in stack
-            - 'keywords'  : keyword names (AgLibraryKeyword via AgLibraryKeywordImage)
+            - 'keywords'  : keywords list
+            - 'collections' : collections list
             - 'exif'      : 'var:"COL1 COL2 ..." : exif metadatas (AgHarvestedExifMetadata). Ex: "exif=var:hasgps"
             - 'extfile'   : extension of an external/extension file (jpg,xmp,...)
             - 'camera'    : camera name
@@ -379,18 +388,6 @@ class LRSelectPhoto(LRSelectGeneric):
                     'conflict' = metadatas different on disk from db
                     'uptodate' = uptodate, in error, or to write on disk
                     'unknown' = write error, phot missing ...
-            return 'am.externalXmpIsDirty = 0 AND i.sidecarStatus = 2.0'
-        elif value == 'changedondisk':
-            return 'am.externalXmpIsDirty=1 and (i.sidecarStatus = 2.0 or i.sidecarStatus = 0.0)'
-        elif value == 'hasbeenchanged':
-            return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 1.0'
-        elif value == 'conflict':
-            return 'am.externalXmpIsDirty=1 and i.sidecarStatus = 1.0'
-        elif value == 'uptodate':
-            return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 0.0'
-        else:
-            raise LRSelectException('invalid "metastatus" value "%s"' % value)
-
             - 'idcollection' : (int) collection id
             - 'collection': (str) collection name
             - 'extfile'   : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
