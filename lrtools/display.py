@@ -11,6 +11,13 @@ SQL results display functions
 # specific functions for display datas
 #
 
+def display_keywords(value):
+    ''' remove None from keywords '''
+    if value is None:
+        value = ''
+    return value
+
+
 def display_aperture(value):
     ''' format aperture in F value '''
     return 'F%.1f' % 2**((float(value)/2))
@@ -37,20 +44,22 @@ def display_date(value):
 #
 DEFAULT_SPEC = ('%6s', None)
 DEFAULT_SPECS = {
-    'name' : ('%-20s', None),
+    'name'      : ('%-20s', None),
     'name=full' : ('%-60s', None),
     'name=base' : ('%-20s', None),
     'name=basext' : ('%-25s', None),
-    'id' : ('%8s', None),
-    'uuid' : ('%38s', None),
-    'rating' : ('%1s', None),
+    'id'        : ('%8s', None),
+    'uuid'      : ('%38s', None),
+    'rating'    : ('%1s', None),
     'colorlabel': ('%8s', None),
-    'datemod' : ('%19s', None),
-    'datecapt' : ('%19s', display_date),
-    'modcount' : ('%2s', None),
-    'master'    :('%10s', None),
+    'datemod'   : ('%19s', None),
+    'datecapt'  : ('%19s', display_date),
+    'modcount'  : ('%2s', None),
+    'master'    : ('%10s', None),
     'vname'     : ('%10s', None),
-    'stackpos'  :('%3s', None),
+    'stackpos'  : ('%3s', None),
+    'keywords'  : ('%-30s', display_keywords),
+    'collections' : ('%-30s', None),
     'camera'    : ('%-15s', None),
     'lens'      : ('%-25s', None),
     'iso'       : ('%5s', display_iso),
@@ -61,11 +70,13 @@ DEFAULT_SPECS = {
 SEPARATOR = ' | '
 
 
-def prepare_display_columns(columns):
+def prepare_display_columns(columns, widths):
     '''
     Prepare columns to display : set width and specific display functions
+    - columns : (str) columns names as defined by LRSelectPhotos
+    - widths : (str) width of each column, comma separated (ex: "15,-50")
     '''
-    # column names and default widths
+    widths = widths.split(',') if widths else []
     column_spec = {}
     for num_col, name in enumerate(columns.split(',')):
         name = name.strip()
@@ -75,6 +86,9 @@ def prepare_display_columns(columns):
             width, func = DEFAULT_SPECS[name]
         else:
             width, func = DEFAULT_SPEC
+        # chance to change widths from outside
+        if num_col < len(widths):
+            width = '%%%ss' % widths[num_col].strip()
         column_spec[num_col] = (name, width, func)
     return column_spec
 
@@ -88,9 +102,10 @@ def display_results(rows, columns, **kwargs):
        * max_lines : max lines to display
        * header : display header (columns names)
        * indent : number of indentation space on each line
+       * widths : widths of columns
        * raw_print : print raw value (for columns aperture, shutter speed, ido, dates)
     '''
-    if not rows:
+    if not rows and kwargs.get('header', True):
         print(' * None data result')
         return
 
@@ -98,36 +113,40 @@ def display_results(rows, columns, **kwargs):
     wanted_lines = kwargs.get('max_lines', 0)
     if wanted_lines == 0 or wanted_lines >= len(rows):
         max_lines = len(rows)
-        print(' * Photo results (%s photos) :' % (len(rows)))
+        if  kwargs.get('header', True):
+            print(' * Photo results (%s photos) :' % (len(rows)))
     else:
         max_lines = wanted_lines
-        print(' * Photo results (first %s photos on %s) :' % (wanted_lines, len(rows)))
+        if  kwargs.get('header', True):
+            print(' * Photo results (first %s photos on %s) :' % (wanted_lines, len(rows)))
 
-    column_spec = prepare_display_columns(columns)
+    column_spec = prepare_display_columns(columns, kwargs.get('widths', ''))
 
     # display header
     if kwargs.get('header', True):
         total_width = 0
-        print(end=indent * ' ')
+        line = []
         for num_col in range(0, len(column_spec)):
             name, width, _ = column_spec[num_col]
             val_width = int(''.join([char for char in width if char.isdigit()]))
-            total_width += val_width + len(SEPARATOR)
+            total_width += val_width
             name = name[:val_width]
-            print(width % name, end=SEPARATOR)
-        print()
-        print(end=indent * ' ')
-        print(total_width * "=")
+            line.append(width % name)
+        print(indent * ' ', SEPARATOR.join(line), sep='')
+        print(indent * ' ', (total_width + (len(column_spec) - 1) * len(SEPARATOR)) * '=', sep='')
 
     # display datas
     for num in range(0, max_lines):
         if num == len(rows):
             break
-        print(end=indent * ' ')
+        line = []
         for num_col, value in enumerate(rows[num]):
             _, width, func_format = column_spec[num_col]
-            if not kwargs.get('raw_print', False) and value is not None and func_format:
-                value = func_format(value)
-            print(width % value, end=SEPARATOR)
-        print()
+            if not kwargs.get('raw_print', False):
+                if value is None:
+                    value = ''
+                elif func_format:
+                    value = func_format(value)
+            line.append(width % value)
+        print(indent * ' ', SEPARATOR.join(line), sep='')
     print()

@@ -7,7 +7,6 @@ Execute Lightroom smart collections from catalog or file
 
 """
 
-from datetime import datetime
 import logging
 import argparse
 from argparse import RawDescriptionHelpFormatter
@@ -33,7 +32,7 @@ def main():
     parser.add_argument('smart_name', help='Name of smart(s) collection', nargs='*')
     parser.add_argument('-b', '--lrcat', default=lrt_config.default_lrcat, help='Ligthroom catalog file for database request (default:"%(default)s")')
     parser.add_argument('-f', '--file', action='store_true', help='positionnal parameters are files, not smart collection names')
-    parser.add_argument('-l', '--list_smarts', action='store_true', help='List smart collections of name "smart_name" from Lightroom catalog.'\
+    parser.add_argument('-l', '--list', action='store_true', help='List smart collections of name "smart_name" from Lightroom catalog.'\
                         ' "smart_name" can include jokers "%%". Leave empty for list all collections')
     parser.add_argument('--raw', action='store_true', help='Display description of smart collection as stored')
     parser.add_argument('-d', '--dict', action='store_true', help='Display description of smart collection as python dictionnary')
@@ -43,6 +42,7 @@ def main():
     parser.add_argument('-n', '--max_lines', type=int, default=0, help='Max number of results to display')
     parser.add_argument('-C', '--columns', default='uuid,name', help='Columns names to print (default:"%(default)s"). For column names, see help of lrselect.py')
     parser.add_argument('-N', '--no_header', action='store_true', help='don\'t print header (columns names)')
+    parser.add_argument('-w', '--widths', help='Widths of columns to display widths (ex:30,-50,10)')
     parser.add_argument('--raw_print', action='store_true', help='print raw value (for speed, aperture columns)')
     parser.add_argument('--log', help='log on file')
 
@@ -84,7 +84,7 @@ def main():
     # open catalog
     lrdb = LRCatDB(args.lrcat)
 
-    if args.list_smarts:
+    if args.list:
         colls = list()
         if not args.smart_name:
             args.smart_name = '%'
@@ -118,15 +118,22 @@ def main():
                 print('Smart Collection filename "%s"' % (smart_name))
                 try:
                     smart = open(smart_name, 'r').read()
-                    smart = smart[4:]
+                    smart = smart[smart.find('{'):]
+                    # smart = smart[4:]
                     lua = SLPP()
                     smart = lua.decode(smart)
-                    print(' * Collection name : "%s"' % (smart_name))
+                    if not smart or 'value' not in smart:
+                        raise TypeError
+                    if 'title' in smart:
+                        smart_title = smart['title']
+                    else:
+                        smart_title = smart_name
+                    print(' * Collection name : "%s"' % (smart_title))
                     smart = smart['value']
                 except OSError:
                     print('  ==> FAILED : Not found')
                     continue
-                except KeyError:
+                except (KeyError, TypeError):
                     print('  ==> FAILED : Invalid syntax')
                     continue
 
