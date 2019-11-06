@@ -145,7 +145,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'uuid' : [ \
                     '', \
-                    'i.id_global= %s', \
+                    'i.id_global= "%s"', \
                     ],
                 'datecapt' : [ \
                     '', \

@@ -10,6 +10,7 @@ Execute Lightroom smart collections from catalog or file
 import logging
 import argparse
 from argparse import RawDescriptionHelpFormatter
+from sqlite3 import OperationalError
 
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config
@@ -33,14 +34,17 @@ def main():
     parser.add_argument('-b', '--lrcat', default=lrt_config.default_lrcat, help='Ligthroom catalog file for database request (default:"%(default)s")')
     parser.add_argument('-f', '--file', action='store_true', help='positionnal parameters are files, not smart collection names')
     parser.add_argument('-l', '--list', action='store_true', help='List smart collections of name "smart_name" from Lightroom catalog.'\
-                        ' "smart_name" can include jokers "%%". Leave empty for list all collections')
+                        ' "smart_name" can include jokers "%%". Leave empty for all collections')
     parser.add_argument('--raw', action='store_true', help='Display description of smart collection as stored')
     parser.add_argument('-d', '--dict', action='store_true', help='Display description of smart collection as python dictionnary')
     parser.add_argument('-s', '--sql', action='store_true', help='Display SQL request')
     parser.add_argument('-c', '--count', action='store_true', help='Display count of results')
     parser.add_argument('-r', '--results', action='store_true', help='Display datas results')
     parser.add_argument('-n', '--max_lines', type=int, default=0, help='Max number of results to display')
-    parser.add_argument('-C', '--columns', default='uuid,name', help='Columns names to print (default:"%(default)s"). For column names, see help of lrselect.py')
+    parser.add_argument('-C', '--columns', default='uuid,name', help='Columns names to print (default:"%(default)s").'\
+                                    ' For column names, see help of lrselect.py. '\
+                                    '(Note that to obtain a number of results identical to those obtained in LR,'\
+                                    ' the uuid column must be present)')
     parser.add_argument('-N', '--no_header', action='store_true', help='don\'t print header (columns names)')
     parser.add_argument('-w', '--widths', help='Widths of columns to display widths (ex:30,-50,10)')
     parser.add_argument('--raw_print', action='store_true', help='print raw value (for speed, aperture columns)')
@@ -85,9 +89,12 @@ def main():
     lrdb = LRCatDB(args.lrcat)
 
     if args.list:
-        colls = list()
         if not args.smart_name:
             args.smart_name = '%'
+
+    if not args.file:
+        # place for process joker '%'
+        colls = list()
         for name in args.smart_name:
             colls += lrdb.select_collections(lrdb.SMART_COLL, name)
         args.smart_name = [name for  _, name, _ in colls]
@@ -168,9 +175,14 @@ def main():
             continue
 
         log.info('start smart "%s"', smart_name)
-        lrdb.cursor.execute(sql)
-        rows = lrdb.cursor.fetchall()
-        log.info('end smart : %s rows', len(rows))
+        try:
+            lrdb.cursor.execute(sql)
+            rows = lrdb.cursor.fetchall()
+            log.info('end smart : %s rows', len(rows))
+        except OperationalError as _e:
+            log.info('end smart : FAILED : %s', _e)
+            print(' ==> FAILED : ', _e)
+            continue
 
         if args.count:
             print(' * Count results:', len(rows), end='  ')

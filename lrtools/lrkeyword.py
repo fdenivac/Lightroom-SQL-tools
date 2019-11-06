@@ -136,13 +136,18 @@ class LRKeywords():
         return hkeynames, keynames
 
 
-    def hierachical_indexes(self, base_key, is_word):
+    def hierachical_indexes(self, key_part, operation):
         '''
-        Return list of all keyword indexes under a base key
-        - base_key : (str) keyword name without joker '%'
-        - is_word : (bool) True for base_key as a complete word in keywords (ex: base_key="sport", returns "sport", "professional sport" , but not "sporting", "transport")
-                           False for part in keywords (ex: base_key="sport", returns "sport" , "sporting", "transport"...))
+        Find keywords containing key_part, and returns all keyword indexes hierachically under theses keywords
+        - key_part : (str) keyword or part of keyword without joker '%'
+        - operation : operation of smart function. Can be: all, any, noneOf, words, beginsWith, endsWith
+            * words : find complete word in keywords (ex: key_part="sport", returns "sport", "professional sport" , but not "sporting", "transport")
+            * beginsWith : complete word in each keyword begins with key_part
+            * endsWith : complete word in each keyword ends with key_part
+            * all, any, noneOf : find all occurences of key_part in keywords
         '''
+        key_part = key_part.lower()
+        key = '"%%%s%%"' % key_part
 
         def find_sub_indexes(index, indexes):
             self.lrdb.cursor.execute('SELECT id_local FROM AgLibraryKeyword WHERE parent = %s' % index)
@@ -151,20 +156,34 @@ class LRKeywords():
                 indexes.append(int(sub_index))
                 find_sub_indexes(int(sub_index), indexes)
 
-        if is_word:
-            self.lrdb.cursor.execute('SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE lower("%%%s%%")' % base_key)
+        if operation == 'words':
+            self.lrdb.cursor.execute('SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key)
             rows = []
             for row in self.lrdb.cursor.fetchall():
                 # check if complete word in keyword
-                if base_key.lower() in row[1].split():
+                if key_part.lower() in row[1].split():
                     rows.append((row[0],))
+        elif operation == 'endsWith':
+            self.lrdb.cursor.execute('SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key)
+            rows = []
+            for row in self.lrdb.cursor.fetchall():
+                for word in row[1].split():
+                    if word.endswith(key_part):
+                        rows.append((row[0],))
+        elif operation == 'beginsWith':
+            self.lrdb.cursor.execute('SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key)
+            rows = []
+            for row in self.lrdb.cursor.fetchall():
+                for word in row[1].split():
+                    if word.startswith(key_part):
+                        rows.append((row[0],))
         else:
-            rows = self.lrdb.cursor.execute('SELECT id_local FROM AgLibraryKeyword WHERE lc_name LIKE lower("%%%s%%")' % base_key).fetchall()
+            rows = self.lrdb.cursor.execute('SELECT id_local FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key).fetchall()
         if not rows:
             return []
         indexes = []
         for row in rows:
-            base_key, = row
-            indexes += [base_key]
-            find_sub_indexes(base_key, indexes)
+            key_part, = row
+            indexes += [key_part]
+            find_sub_indexes(key_part, indexes)
         return indexes

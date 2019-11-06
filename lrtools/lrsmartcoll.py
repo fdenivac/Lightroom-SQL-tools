@@ -82,14 +82,14 @@ class SQLSmartColl():
 
     def criteria_aspectRatio(self):
         ''' criteria aspectRatio '''
-        if self.func['value'] == 'square':
-            if self.func['operation'] == '==':
-                self.sql += self._complete_sql('', 'WHERE i.aspectRatioCache=1')
-            else:
-                raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
-        else:
+        what = {'square' : ('=', '!='), 'portrait' : ('<', '>='), 'landscape' : ('>', '<=')}
+        if self.func['value'] not in what:
             raise SmartException('value unsupported: %s' %  self.func['value'])
-
+        if self.func['operation'] not in ('==', '!='):
+            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+        oper_eq, oper_neq = what[self.func['value']]
+        oper = oper_eq if self.func['operation'] == '==' else oper_neq
+        self.sql += self._complete_sql('', 'WHERE i.aspectRatioCache %s 1' % oper)
 
 
     def criteria_captureTime(self):
@@ -136,60 +136,57 @@ class SQLSmartColl():
     def criteria_collection(self):
         ''' criteria collection '''
         lrcollection = LRSelectCollection(self.lrdb)
-        _base_sql = self.lrdb.lrphoto.select_generic(self.base_select, 'collection', sql=True, distinct=True)
-        _base_sql = _base_sql[:_base_sql.find(' WHERE ')]
         if self.func['operation'] in ['all', 'beginsWith', 'endsWith']:
             what = {'all' : '"%%%s%%"', 'beginsWith' : '"%s%%"', 'endsWith' : '"%%%s"'}
             values = self.func['value'].split()
-            self.build_all_values_with_join(' LEFT JOIN  AgLibraryCollectionimage ci%s ON ci%s.image = i.id_local LEFT JOIN AgLibraryCollection col%s ON col%s.id_local = ci%s.Collection ', \
-                                    ' col%s.name ' +  'LIKE %s' % (what[self.func['operation']]), values)
-
+            self.build_all_values_with_join(' LEFT JOIN AgLibraryCollectionimage ci%s ON ci%s.image = i.id_local'\
+                                            ' LEFT JOIN AgLibraryCollection col%s ON col%s.id_local = ci%s.Collection ', \
+                                            ' col%s.name ' +  'LIKE %s' % (what[self.func['operation']]), values)
         elif self.func['operation'] == 'noneOf':
             idscoll = list()
             for coll in self.func['value'].split():
                 idscoll += [id for id, in lrcollection.select_generic('id', 'name="%%%s%%"' % coll).fetchall()]
             idscoll = ','.join([str(id) for id in idscoll])
-            self.sql += self.base_sql + ' EXCEPT '+ _base_sql + ' WHERE ci.collection IN (%s)' % idscoll
+            self.sql += self.base_sql + ' EXCEPT '+ self.base_sql + \
+                ' LEFT JOIN  AgLibraryCollectionimage ci ON ci.image = i.id_local WHERE ci.collection IN (%s)' % idscoll
         else:
             raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+
 
 
     def criteria_keywords(self):
         ''' criteria keyword '''
         _base_sql = self.lrdb.lrphoto.select_generic(self.base_select, 'keyword', distinct=True, sql=True)
         _base_sql = _base_sql[:_base_sql.find(' WHERE ')]
-        if self.func['operation'] == 'noneOf': # OK
+        if self.func['operation'] == 'noneOf':
             lrk = LRKeywords(self.lrdb)
             indexes = list()
             for keyword in self.func['value'].split():
-                indexes += lrk.hierachical_indexes(keyword, False)
+                indexes += lrk.hierachical_indexes(keyword, self.func['operation'])
             indexes = ','.join([str(index) for index in indexes])
-            self.sql += _base_sql + ' EXCEPT '+ _base_sql + ' WHERE kw.id_local IN (%s)' % indexes
+            self.sql += _base_sql + ' EXCEPT '+ _base_sql + ' WHERE kw1.id_local IN (%s)' % indexes
 
         elif self.func['operation'] == 'any':
             lrk = LRKeywords(self.lrdb)
             indexes = list()
             for keyword in self.func['value'].split():
-                indexes += lrk.hierachical_indexes(keyword, False)
+                indexes += lrk.hierachical_indexes(keyword, self.func['operation'])
             indexes = ','.join([str(index) for index in indexes])
-            self.sql += _base_sql  + ' WHERE kw.id_local IN (%s)' % indexes
+            self.sql += _base_sql  + ' WHERE kw1.id_local IN (%s)' % indexes
 
-        elif self.func['operation']  in ['all', 'words']:
-            # TODO add operation beginswith, endswith
+        elif self.func['operation']  in ['all', 'words', 'beginsWith', 'endsWith']:
             lrk = LRKeywords(self.lrdb)
             values = []
             for keyword in self.func['value'].split():
-                if self.func['operation'] == 'all':
-                    indexes = lrk.hierachical_indexes(keyword, False)
-                else:       # words
-                    indexes = lrk.hierachical_indexes(keyword, True)
+                indexes = lrk.hierachical_indexes(keyword, self.func['operation'])
                 values.append(','.join([str(index) for index in indexes]))
-            self.build_all_values_with_join(' LEFT JOIN AgLibraryKeywordImage kwi%s ON i.id_local = kwi%s.image  LEFT JOIN AgLibraryKeyword kw%s ON kw%s.id_local = kwi%s.tag ', \
-                                    ' kw%s.id_local IN (%s) ', values)
+            self.build_all_values_with_join(' LEFT JOIN AgLibraryKeywordImage kwi%s ON i.id_local = kwi%s.image '\
+                                            ' LEFT JOIN AgLibraryKeyword kw%s ON kw%s.id_local = kwi%s.tag ', \
+                                            ' kw%s.id_local IN (%s) ', values)
 
         elif self.func['operation'] == 'empty':
-            _sql = _base_sql.replace(' LEFT JOIN AgLibraryKeyword kw ON kw.id_local = kwi.tag', '')
-            self.sql += _sql + ' WHERE kwi.image IS NULL'
+            _sql = _base_sql.replace(' LEFT JOIN AgLibraryKeyword kw1 ON kw1.id_local = kwi1.tag', '')
+            self.sql += _sql + ' WHERE kwi1.image IS NULL'
         elif self.func['operation'] == 'notEmpty':
             _sql = self.lrdb.lrphoto.select_generic(self.base_select, '', sql=True)
             self.sql += _sql + '  WHERE  i.id_local IN (SELECT DISTINCT kwi.image FROM AgLibraryKeywordImage kwi) '
@@ -331,10 +328,13 @@ class SQLSmartColl():
 
 
     def criteria_all(self):
-        ''' criteria all text searchable : find in metadatas (AgMetadataSearchIndex.searchindex), keywords, path and filename '''
+        ''' criteria all text searchable :
+
+        Find in earchindex, keywords, collections, creator, coptright, caption, colorprofile, full pathname
+        '''
         rules = {\
-            'any': ('OR'),\
-            'all': ('AND'),\
+            'any': (' OR '),\
+            'all': (' AND '),\
         }
         if self.func['operation'] not in rules:
             raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
@@ -344,18 +344,31 @@ class SQLSmartColl():
         joins = [' LEFT JOIN AgMetadataSearchIndex msi ON i.id_local = msi.image ',\
                 ' LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local ',\
                 ' LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local ',\
-                ' LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local ']
+                ' LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local ', \
+                ' LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image ',\
+                ' LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local ',\
+                ' LEFT JOIN AgLibraryIptc liptc on liptc.image = i.id_local ',\
+                ' LEFT JOIN AgSourceColorProfileConstants scpc on scpc.image = i.id_local',\
+                ]
         for num_value, value in enumerate(self.func['value'].split()):
-            indexes = lrk.hierachical_indexes(value, False)
+            indexes = lrk.hierachical_indexes(value, self.func['operation'])
             joins.append(' LEFT JOIN AgLibraryKeywordImage kwi%s ON i.id_local = kwi%s.image'\
                          ' LEFT JOIN AgLibraryKeyword kw%s ON kw%s.id_local = kwi%s.tag '.replace('%s', str(num_value)))
+            joins.append(' LEFT JOIN AgLibraryCollectionimage ci%s ON ci%s.image = i.id_local'\
+                         ' LEFT JOIN AgLibraryCollection col%s ON col%s.id_local = ci%s.Collection '.replace('%s', str(num_value)))
             if num_value > 0:
                 wheres += [combine]
-            wheres.append('(msi.searchIndex LIKE "%%%s%%" '\
-                        ' OR fi.lc_idx_filename LIKE "%%%s%%" '\
-                        ' OR fo.pathFromRoot LIKE "%%%s%%"'\
-                        ' OR rf.name LIKE "%%%s%%"'.replace('%s', str(value)))
+            wheres.append('(msi.searchIndex LIKE "%%s%" '\
+                        ' OR fi.lc_idx_filename LIKE "%%s%" '\
+                        ' OR fo.pathFromRoot LIKE "%%s%"'\
+                        ' OR rf.absolutePath LIKE "%%s%"'.replace('%s', str(value)))
+            wheres.append(' OR iic.value LIKE "%%%s%%" ' % value)
+            wheres.append(' OR liptc.caption LIKE "%%%s%%" ' % value)
+            wheres.append(' OR liptc.copyright LIKE "%%%s%%" ' % value)
+            wheres.append(' OR scpc.profileName LIKE "%%%s%%" ' % value)
+            wheres.append(' OR  col%s.name LIKE "%%%s%%"' % (num_value, value))
             wheres.append(' OR  kw%s.id_local IN (%s)) ' % (num_value, ','.join([str(index) for index in indexes])))
+
         # the base 'select columns from' :
         self.base_sql_select = self._add_joins_from_select(self.lrdb.lrphoto.select_generic(self.base_select, '', distinct=True, sql=True))
         # final sql
@@ -379,7 +392,7 @@ class SQLSmartColl():
         wheres = [' WHERE ']
         joins = [' LEFT JOIN AgMetadataSearchIndex msi ON i.id_local = msi.image ']
         for num_value, value in enumerate(self.func['value'].split()):
-            indexes = lrk.hierachical_indexes(value, False)
+            indexes = lrk.hierachical_indexes(value, self.func['operation'])
             joins.append(' LEFT JOIN AgLibraryKeywordImage kwi%s ON i.id_local = kwi%s.image'\
                          ' LEFT JOIN AgLibraryKeyword kw%s ON kw%s.id_local = kwi%s.tag '.replace('%s', str(num_value)))
             if num_value > 0:
@@ -437,11 +450,14 @@ class SQLSmartColl():
         if self.func['operation'] in ['==', '!=']:
             values = [self.func['value']]
         else:
-            # TODO:  ? which characters must to be evaluated as space (as "+"")
-            self.func['value'] = self.func['value'].lower().replace('+', ' ')
+            # character '+' force an AND combination
+            self.func['value'] = self.func['value'].lower().replace('+', ' +')
             values = self.func['value'].split()
         for value in values:
-            if _sql:
+            if value[0] == '+':      # force AND
+                _sql += ' AND '
+                value = value[1:]
+            elif _sql:
                 _sql += ' %s ' % combine   # "AND" or "OR"
             modifier = ''
             if value[0] == '!':
@@ -478,9 +494,9 @@ class SQLSmartColl():
         for num_value, value in enumerate(values):
             joins.append(base_join.replace('%s', str(num_value)))
             if num_value == 0:
-                wheres.append('WHERE')
+                wheres.append(' WHERE ')
             else:
-                wheres.append('AND')
+                wheres.append(' AND ')
             wheres.append(base_where % (num_value, value))
         # the base 'select columns from' :
         _sql = self.lrdb.lrphoto.select_generic(self.base_select, '', distinct=True, sql=True)

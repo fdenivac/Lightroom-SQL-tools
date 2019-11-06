@@ -21,6 +21,9 @@ from lrtools.lrselectphoto import LRSelectPhoto
 from lrtools.lrselectcollection import LRSelectCollection
 from lrtools.display import display_results
 
+
+DEFAULT_COLUMNS = 'name,datecapt'
+
 log = logging.getLogger()
 
 
@@ -54,7 +57,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=RawTextHelpFormatter)
-    parser.add_argument('columns', help='Columns to display', default="name,datecapt", nargs='?')
+    parser.add_argument('columns', help='Columns to display', default=DEFAULT_COLUMNS, nargs='?')
     parser.add_argument('criteria', help='Criteria of select', nargs='?')
     parser.add_argument('-b', '--lrcat', default=lrt_config.default_lrcat, help='Ligthroom catalog file for database request (default:"%(default)s")')
     parser.add_argument('-s', '--sql', action='store_true', help='Display SQL request')
@@ -72,6 +75,9 @@ def main():
     # --max_lines option implies --results
     if args.max_lines > 0:
         args.results = True
+    # default columns if empty
+    if not args.columns:
+        args.columns = DEFAULT_COLUMNS
 
     # logging
     if args.log:
