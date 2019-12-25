@@ -230,6 +230,7 @@ Unfortunaly :
 * captureTime
 * collection
 * colorMode
+* creator
 * exif
 * fileFormat
 * filename
@@ -237,6 +238,7 @@ Unfortunaly :
 * focalLength
 * hasAdjustments
 * hadsGPSData
+* heightCropped
 * iptc
 * isoSpeedRating
 * keywords
@@ -249,6 +251,7 @@ Unfortunaly :
 * shutterSpeed
 * touchTime
 * treatment
+* widthCropped
 
 ### Some examples
 
