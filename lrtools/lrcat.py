@@ -24,7 +24,7 @@ from .slpp import SLPP
 
 # date reference of lightroom (at least for timestamp of photos modified)
 # (TODO : using select based on touchtime, compararing with count results in LR, needs sometimes to shift of 6h hours ! localization problems ?)
-DATE_REF = datetime(2001, 1, 1, 0, 0, 0)
+DATE_REF = datetime(2001, 1, 1, 6, 0, 0)
 
 
 
@@ -384,6 +384,7 @@ class LRNames(object):
         datemod = kwargs.pop('datemod', None)
         prod_basepath = kwargs.pop('dir', None)
         date_fmt = kwargs.pop('fmtdate', None)
+        use_datehist = kwargs.pop('use_datehist', False)
 
         criters = 'sort=name, videos=False'
         if datecapt:
@@ -413,7 +414,10 @@ class LRNames(object):
 
         # load all photos infos
         masters_vcopies = dict()    # for memorize the master photos having virtual copies
-        columns = 'id, name=basext, uuid, vname, stackpos, master, datemod'
+        if use_datehist:
+            columns = 'id, name=basext, uuid, vname, stackpos, master, datehist'
+        else:
+            columns = 'id, name=basext, uuid, vname, stackpos, master, datemod'
         if prod_basepath:
             columns += ', xmp'
         log.info('LRNames criters %s', criters)

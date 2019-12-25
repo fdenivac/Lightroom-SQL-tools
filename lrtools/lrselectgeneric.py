@@ -144,6 +144,17 @@ class LRSelectGeneric():
         ''' value is boolean '''
         return '=' if to_bool(value) else '!='
 
+    def func_0_1(self, value):
+        ''' value is a null condition '''
+        value = value.lower()
+        if value in ['0', 'false']:
+            value = '0'
+        elif value in ['1', 'true']:
+            value = '1'
+        else:
+            raise LRSelectException('invalid gps criterion value')
+        return value
+
     def func_value_or_null(self, value):
         ''' value is a null condition '''
         value = value.lower()
@@ -153,6 +164,17 @@ class LRSelectGeneric():
             value = "NOT NULL"
         else:
             value = '= "%s"' % value
+        return value
+
+    def func_like_value_or_null(self, value):
+        ''' value is a null condition '''
+        value = value.lower()
+        if value in ['null', 'false']:
+            value = 'IS NULL'
+        elif value in ['!null', 'true']:
+            value = "NOT NULL"
+        else:
+            value = 'LIKE "%s"' % value
         return value
 
     def func_value_or_not_equal(self, value):
@@ -228,7 +250,7 @@ class LRSelectGeneric():
                 if self._VAR_FIELD in dvalues and value.startswith(self._VAR_FIELD):
                     # _VAR_FIELD introduces process for columns name specification
                     _, from_sql = dvalues[self._VAR_FIELD]
-                    col_sql = self.remove_quotes(value[len(self._VAR_FIELD):]).replace(' ', ',')
+                    col_sql = self.remove_quotes(value[len(self._VAR_FIELD):])
                 else:
                     if value not in list(dvalues.keys()):
                         value = bool(value)
@@ -301,6 +323,8 @@ class LRSelectGeneric():
                 continue
 
             if _from:
+                if isinstance(_from, str):
+                    _from = [_from]
                 _from = [_f.replace('<NUM>', '%s' % nb_wheres[key]) for  _f in _from]
                 self._add_from(_from, froms)
             _where = _where.replace('<NUM>', '%s' % nb_wheres[key])

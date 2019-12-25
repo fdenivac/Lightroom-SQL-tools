@@ -68,6 +68,7 @@ def main():
     parser.add_argument('-t', '--table', choices=['photo', 'collection'], default='photo', help='table to work on : photo or collection')
     parser.add_argument('-N', '--no_header', action='store_true', help='don\'t print header (photos count ans columns names)')
     parser.add_argument('-w', '--widths', help='Widths of columns to display widths (ex:30,-50,10)')
+    parser.add_argument('-S', '--separator', default=' | ', help='separator string between columns (default:"%(default)s")')
     parser.add_argument('--raw_print', action='store_true', help='print raw value (for speed, aperture columns)')
     parser.add_argument('--log', help='log on file')
 
@@ -84,12 +85,10 @@ def main():
         # basicConfig doesn't support utf-8 encoding yet (?)
         #   logging.basicConfig(filename=args.log, level=logging.INFO, encoding='utf-8')
         # use work-around :
-        log = logging.getLogger()
         log.setLevel(logging.INFO)
         handler = logging.FileHandler(args.log, 'a', 'utf-8')
         handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
         log.addHandler(handler)
-    log = logging.getLogger()
     log.info('lrselect start')
 
     # open database
@@ -109,19 +108,22 @@ def main():
         except OSError:
             print(' ==> Failed to open file')
             return
+        # build rows ...
         num_uuid = 1
+        rows = []
         for uuid in uuids:
             try:
-                rows = select_generic(args.columns, 'uuid="%s"' % uuid).fetchall()
+                rows.append(select_generic(args.columns, 'uuid="%s"' % uuid).fetchone())
             except LRSelectException as _e:
                 print(' ==> FAILED:', _e)
                 return
             except sqlite3.OperationalError as _e:
                 print(' ==> FAILED SQL :', _e)
                 return
-            for row in rows:
-                print('\t'.join(row))
             num_uuid += 1
+        # ... and displays
+        display_results(rows, args.columns, \
+            max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print, widths=args.widths, separator=args.separator)
         return
 
 
@@ -144,6 +146,9 @@ def main():
     try:
         rows = select_generic(args.columns, args.criteria).fetchall()
     except (LRSelectException, sqlite3.OperationalError)  as _e:
+        # TODO: convert specific error caused by a limitation on build SQL with criteria width or height
+        if _e.args[0] == 'no such column: dims':
+            _e.args = ('Try to add column "dims"',)
         print(' ==> FAILED:', _e)
         return
 
@@ -152,7 +157,7 @@ def main():
 
     if args.results:
         display_results(rows, args.columns, \
-            max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print, widths=args.widths)
+            max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print, widths=args.widths, separator=args.separator)
 
 
 

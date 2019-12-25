@@ -9,7 +9,6 @@ Execute Lightroom smart collections from catalog or file
 
 import logging
 import argparse
-from argparse import RawDescriptionHelpFormatter
 from sqlite3 import OperationalError
 
 # config is loaded on import
@@ -28,9 +27,12 @@ def main():
     #
     # commands parser
     #
-    parser = argparse.ArgumentParser(description='Execute smart collections from Lightroom catalog or from a exported file',
-                                     formatter_class=RawDescriptionHelpFormatter)
-    parser.add_argument('smart_name', help='Name of smart(s) collection', nargs='*')
+    # prepare description
+    criteria = ', '.join([ crit.split('_')[1] for crit in dir(SQLSmartColl) if crit.startswith('criteria_')])
+    description = 'Execute smart collections from Lightroom catalog or from a exported file.\n'\
+                    'Supported criteria are : ' + criteria
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('smart_name', help='Name of smart(s) collection. Can be lightroom smart collections (joker "%%"), or filenames (joker "*") with option "--file",', nargs='*')
     parser.add_argument('-b', '--lrcat', default=lrt_config.default_lrcat, help='Ligthroom catalog file for database request (default:"%(default)s")')
     parser.add_argument('-f', '--file', action='store_true', help='positionnal parameters are files, not smart collection names')
     parser.add_argument('-l', '--list', action='store_true', help='List smart collections of name "smart_name" from Lightroom catalog.'\
@@ -47,6 +49,7 @@ def main():
                                     ' the uuid column must be present)')
     parser.add_argument('-N', '--no_header', action='store_true', help='don\'t print header (columns names)')
     parser.add_argument('-w', '--widths', help='Widths of columns to display widths (ex:30,-50,10)')
+    parser.add_argument('-S', '--separator', default=' | ', help='separator string between columns (default:"%(default)s")' )
     parser.add_argument('--raw_print', action='store_true', help='print raw value (for speed, aperture columns)')
     parser.add_argument('--log', help='log on file')
 
@@ -195,7 +198,7 @@ def main():
 
         if args.results:
             display_results(rows, args.columns, \
-                max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print)
+                max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print, separator=args.separator)
 
     log.info('lrsmart end')
 

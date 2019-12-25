@@ -51,8 +51,13 @@ class LRSelectPhoto(LRSelectGeneric):
                 True : [ 'i.rating',  None ] }, \
             'colorlabel' : { \
                 True : [ 'i.colorlabels AS colorlabel',  None ] }, \
+            # modif date (including keywords changes)
             'datemod' : { \
                 True : [ 'strftime("%Y-%m-%dT%H:%M:%S", datetime("2001-01-01",  "+" || i.touchtime || " seconds")) AS datemod',  None ], }, \
+            # modif date based on history developement steps, ignoring exportations
+            'datehist' : { \
+                True : [ '(SELECT strftime("%Y-%m-%dT%H:%M:%S", datetime("2001-01-01",  "+" || max(ids2.datecreated) || " seconds")) '\
+                            'FROM Adobe_libraryImageDevelopHistoryStep ids2 WHERE ids2.image =i.id_local AND substr(name,1,11) <> "Exportation")',  None ], }, \
             'modcount' : { \
                 True : [ 'i.touchCount AS modcount',  None ] }, \
             'datecapt' : { \
@@ -105,7 +110,22 @@ class LRSelectPhoto(LRSelectGeneric):
                 True : [ 'em.aperture',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
             'speed' : { \
                 True : [ 'em.shutterSpeed',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+            'dims' : { \
+                True : [ '(SELECT CASE '\
+                            'WHEN ids.croppedWidth <> "uncropped" AND i.orientation IN ("AB", "BA", "CD", "DC") THEN CAST(ids.croppedWidth AS int) || "x" || CAST(ids.croppedHeight AS int) '\
+                            'WHEN ids.croppedWidth <> "uncropped" AND i.orientation IN ("AD", "DA", "BC", "CB") THEN CAST(ids.croppedHeight AS int) || "x" || CAST(ids.croppedWidth AS int) '\
+                            'WHEN ids.croppedWidth = "uncropped" AND i.orientation IN ("AB", "BA", "CD", "DC") THEN CAST(i.filewidth AS int) || "x" || CAST(i.fileHeight AS int) '\
+                            'WHEN ids.croppedWidth = "uncropped" AND i.orientation IN ("AD", "DA", "BC", "CB") THEN CAST(i.fileHeight AS int) || "x" || CAST(i.filewidth AS int) '\
+                            'ELSE CAST(i.filewidth AS int) || "x" || CAST(i.fileHeight AS int) END) AS dims ',
+                      ['LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local'] ] }, \
 
+            'creator' : { \
+                True : [ 'iic.value',  # <TODO> or searchindex ??
+                        ['LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image',\
+                         'LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local'] ] }, \
+            'caption' : { \
+                True : [ 'iptc.caption',\
+                        ['LEFT JOIN AgLibraryIPTC iptc on i.id_local = iptc.image'] ] }, \
             'exif' : { \
                 LRSelectGeneric._VAR_FIELD: \
                     [   None,
@@ -145,7 +165,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'uuid' : [ \
                     '', \
-                    'i.id_global= "%s"', \
+                    'i.id_global = "%s"', \
                     ],
                 'datecapt' : [ \
                     '', \
@@ -191,6 +211,19 @@ class LRSelectPhoto(LRSelectGeneric):
                     '', \
                     'i.colorlabels %s %s', self.func_value_or_not_equal,
                     ],
+                'title' : [ \
+                    'LEFT JOIN AgMetadataSearchIndex msi ON i.id_local = msi.image', \
+                    '%s', self.func_titleindex \
+                    ],
+                'caption' : [ \
+                    'LEFT JOIN AgLibraryIPTC iptc on i.id_local = iptc.image', \
+                    'iptc.caption %s', self.func_like_value_or_null
+                    ],
+                'creator' : [ \
+                    ['LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image', \
+                    'LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local'], \
+                    'iic.value LIKE "%s"',
+                    ],
                 'iso' : [ \
                     'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
                     'em.isoSpeedRating %s',
@@ -216,6 +249,19 @@ class LRSelectPhoto(LRSelectGeneric):
                     ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
                     ' LEFT JOIN AgInternedExifLens el on el.id_local = em.lensRef'], \
                     'el.value LIKE "%s"',
+                    ],
+                # TODO: width and height criteria works on 'virtual' column dims ! So, the 'dims' column dims MUST to be included in the query
+                'width' : [ \
+                    ['LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local'], \
+                    'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) %s',
+                    ],
+                'height' : [ \
+                    ['LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local'], \
+                    'CAST(substr(dims, instr(dims, "x")+1) AS int) %s',
+                    ],
+                'gps' : [ \
+                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'], \
+                    'em.hasGps = %s', self.func_0_1,
                     ],
                 'import' : [ \
                     ['LEFT JOIN AgLibraryImportImage impim on  i.id_local = impim.image', \
@@ -302,6 +348,16 @@ class LRSelectPhoto(LRSelectGeneric):
             action = (' ', '__')
         return action[0].join([ 'msi.exifSearchIndex LIKE "%%/t%s/t%%"' % val for val in value.split(action[1])])
 
+    def func_titleindex(self, value):
+        '''  specific value for title : in otherSearchIndex column '''
+        if '&' in value:
+            action = (' AND ', '&')
+        elif '|' in value:
+            action = (' OR ', '|')
+        else:
+            action = (' ', '__')
+        return action[0].join([ 'msi.otherSearchIndex LIKE "%%/t%s/t%%"' % val for val in value.split(action[1])])
+
     def func_aperture(self, value):
         '''
         convert aperture value to LR value : 2 * ( log base 2 of F number)
@@ -336,7 +392,7 @@ class LRSelectPhoto(LRSelectGeneric):
         return value
 
 
-    def select_generic(self, columns, criters, **kwargs):
+    def select_generic(self, columns, criters='', **kwargs):
         '''
         Build SQL request for photo table (Adobe_images) from key/value pair
         columns :
@@ -354,14 +410,17 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'stackpos'  : position in stack
             - 'keywords'  : keywords list
             - 'collections' : collections list
-            - 'exif'      : 'var:"COL1 COL2 ..." : exif metadatas (AgHarvestedExifMetadata). Ex: "exif=var:hasgps"
+            - 'exif'      : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
             - 'extfile'   : extension of an external/extension file (jpg,xmp,...)
+            - 'dims'      : image dimensions in form <WIDTH>x<HEIGHT>
             - 'camera'    : camera name
             - 'lens'      : lens name
             - 'iso'       : ISO value
             - 'focal'     : focal lens
             - 'aperture'  : aperture lens
             - 'speed'     : speed shutter
+            - 'creator'   : photo creator
+            - 'caption'   : photo caption
         criterias :
             - 'name'      : (str) filename without extension
             - 'exactname' : (str) filename insensitive without extension
@@ -370,10 +429,18 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'uuid'      : (string) photo UUID (Adobe_images.id_global)
             - 'rating'    : (str) [operator (<,<=,>,=, ...)] and rating/note. ex: "rating==5"
             - 'colorlabel': (str) color and label. Color names are localized (Bleu, Rouge,...)
+            - 'creator'   : (str) photo creator
+            - 'caption'   : (true/false/str) photo caption
             - 'datecapt'  : (str) operator (<,<=,>, >=) and capture date
             - 'datemod'   : (str) operator (<,<=,>, >=) and lightroom modification date
-            - 'exifindex' : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
+            - 'iso'       : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
+            - 'focal'     : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
+            - 'aperture'  : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
+            - 'speed'     : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
+            - 'width'     : (int) cropped image width. Need to include column "dims"
+            - 'height     : (int) cropped image height. Need to include column "dims"
             - 'videos'    : (bool) type videos
+            - 'exifindex' : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
             - 'vcopies'   : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
             - 'keyword'   : (str) keyword name. Only one keyword can be specified in request
             - 'import'    : (int) import id
@@ -391,10 +458,6 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'idcollection' : (int) collection id
             - 'collection': (str) collection name
             - 'extfile'   : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
-            - 'iso'       : ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
-            - 'focal'     : focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
-            - 'aperture'  : aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
-            - 'speed'     : speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
             - 'sort'      : sql sort string
             - 'distinct'  : suppress similar lines of results
         kwargs :

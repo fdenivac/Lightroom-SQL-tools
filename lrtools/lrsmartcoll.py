@@ -50,6 +50,14 @@ class SQLSmartColl():
         treatment
     '''
 
+    _SELECT_DIMS = ', (SELECT CASE '\
+                ' WHEN ids.croppedWidth <> "uncropped" AND i.orientation IN ("AB", "BA", "CD", "DC") THEN CAST(ids.croppedWidth AS int) || "x" || CAST(ids.croppedHeight AS int)'\
+                ' WHEN ids.croppedWidth <> "uncropped" AND i.orientation IN ("AD", "DA", "BC", "CB") THEN CAST(ids.croppedHeight AS int) || "x" || CAST(ids.croppedWidth AS int)'\
+                ' WHEN ids.croppedWidth = "uncropped" AND i.orientation IN ("AB", "BA", "CD", "DC") THEN CAST(i.filewidth AS int) || "x" || CAST(i.fileHeight AS int)'\
+                ' WHEN ids.croppedWidth = "uncropped" AND i.orientation IN ("AD", "DA", "BC", "CB") THEN CAST(i.fileHeight AS int) || "x" || CAST(i.filewidth AS int)'\
+                ' ELSE CAST(i.filewidth AS int) || "x" || CAST(i.fileHeight AS int) END) AS dims '
+
+
     def __init__(self, lrdb, smart, verbose=False):
         '''
         Initialize from :
@@ -90,6 +98,38 @@ class SQLSmartColl():
         oper_eq, oper_neq = what[self.func['value']]
         oper = oper_eq if self.func['operation'] == '==' else oper_neq
         self.sql += self._complete_sql('', 'WHERE i.aspectRatioCache %s 1' % oper)
+
+
+    def criteria_widthCropped(self):
+        ''' criteria widthCropped '''
+        if self.func['operation'] == 'in':
+            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
+                                'WHERE  i.fileFormat <> "VIDEO" AND '\
+                                'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) >= %s AND '\
+                                'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) <= %s' %  (self.func['value'], self.func['value2']))
+        else:
+            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
+                                'WHERE  i.fileFormat <> "VIDEO" AND '\
+                                'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) %s %s' %  (self.func['operation'], self.func['value']))
+        _parts = _sql.split(' FROM ')
+        _parts[0] += self._SELECT_DIMS
+        self.sql += ' FROM '.join(_parts)
+
+
+    def criteria_heightCropped(self):
+        ''' criteria heightCropped '''
+        if self.func['operation'] == 'in':
+            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
+                                'WHERE  i.fileFormat <> "VIDEO" AND '\
+                                'CAST(substr(dims, instr(dims, "x")+1) AS int) >= %s AND '\
+                                'CAST(substr(dims, instr(dims, "x")+1) AS int) <= %s' %  (self.func['value'], self.func['value2']))
+        else:
+            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
+                                'WHERE  i.fileFormat <> "VIDEO" AND '\
+                                'CAST(substr(dims, instr(dims, "x")+1) AS int) %s %s' %  (self.func['operation'], self.func['value']))
+        _parts = _sql.split(' FROM ')
+        _parts[0] += self._SELECT_DIMS
+        self.sql += ' FROM '.join(_parts)
 
 
     def criteria_captureTime(self):
@@ -427,6 +467,14 @@ class SQLSmartColl():
         self.sql += ''.join([self.base_sql_select] +  [' LEFT JOIN '] + [' LEFT JOIN '.join(self.joins)] + [' WHERE '] + [where])
 
 
+    def criteria_creator(self):
+        '''
+        criteria creator
+        '''
+        self.build_string_value('LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image ' \
+                    'LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local',\
+                    'iic.value')
+
 
     def build_string_value(self, tables_join, where_column):
         '''
@@ -468,14 +516,16 @@ class SQLSmartColl():
 
 
 
-    def build_numeric_value(self, tables_join, where_column):
+    def build_numeric_value(self, tables_join, where_column, where_complement=''):
         '''
         build SQL for numeric values (==, !=, >, <, >=, <=, in)
         '''
         if self.func['operation'] == 'in':
-            self.sql += self._complete_sql(tables_join, ' WHERE %s >= %s AND %s <= %s' % (where_column, self.func['value'], where_column, self.func['value2']))
+            self.sql += self._complete_sql(tables_join, ' WHERE %s >= %s AND %s <= %s %s' % \
+                                (where_column, self.func['value'], where_column, self.func['value2'], where_complement))
         else:
-            self.sql += self._complete_sql(tables_join, 'WHERE %s %s %s' % (where_column, self.func['operation'], self.func['value']))
+            self.sql += self._complete_sql(tables_join, 'WHERE %s %s %s %s' % \
+                                (where_column, self.func['operation'], self.func['value'], where_complement))
 
 
     def build_boolean_value(self, tables_join, where_column):
@@ -524,7 +574,7 @@ class SQLSmartColl():
     def _add_joins(self, tables):
         '''
         add join tables list to self.joins
-         '''
+        '''
         for table in tables:
             for ajoin in table.split('LEFT JOIN'):
                 ajoin = ajoin.strip()

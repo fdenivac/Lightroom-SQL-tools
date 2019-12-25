@@ -89,8 +89,8 @@ It build SQL SELECT request from 2 strings describing informations to display, a
 ### Complete Help :
 
     usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-n MAX_LINES] [-f FILE]
-                    [-t {photo,collection}] [-N] [--raw_print]
-                    [--log LOG]
+                    [-t {photo,collection}] [-N] [-w WIDTHS] [-S SEPARATOR]
+                    [--raw_print] [--log LOG]
                     [columns] [criteria]
 
     Select elements from SQL table from Lightroom catalog.
@@ -98,62 +98,69 @@ It build SQL SELECT request from 2 strings describing informations to display, a
     For photo : specify the "columns" to display and the "criteria of selection in :
             columns :
                 - 'name'='base'|'basext'|'full' : base name, basename + extension, full name (path,name, extension)
-                - 'id'         : id photo (Adobe_images.id_local)
-                - 'uuid'       : UUID photo (Adobe_images.id_global)
-                - 'rating'     : rating/note
-                - 'colorlabel' : color and label
-                - 'datemod'    : modificaton date
-                - 'datecapt'   : capture date
-                - 'modcount'   : number of modifications
-                - 'master'     : master image of virtual copy
-                - 'xmp'        : all xmp metadatas
-                - 'vname'      : virtual copy name
-                - 'stackpos'   : position in stack
-                - 'keywords'   : keyword list
-                - 'collections': collections list
-                - 'exif'       : 'var:"COL1 COL2 ..." : exif metadatas (AgHarvestedExifMetadata). Ex: "exif=var:hasgps"
-                - 'extfile'    : extension of an external/extension file (jpg,xmp,...)
-                - 'camera'     : camera name
-                - 'lens'       : lens name
-                - 'iso'        : ISO value
-                - 'focal'      : focal lens
-                - 'aperture'   : aperture lens
-                - 'speed'      : speed shutter
+                - 'id'        : id photo (Adobe_images.id_local)
+                - 'uuid'      : UUID photo (Adobe_images.id_global)
+                - 'rating'    : rating/note
+                - 'colorlabel': color and label
+                - 'datemod'   : modificaton date
+                - 'datecapt'  : capture date
+                - 'modcount'  : number of modifications
+                - 'master'    : master image of virtual copy
+                - 'xmp'       : all xmp metadatas
+                - 'vname'     : virtual copy name
+                - 'stackpos'  : position in stack
+                - 'keywords'  : keywords list
+                - 'collections' : collections list
+                - 'exif'      : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
+                - 'extfile'   : extension of an external/extension file (jpg,xmp,...)
+                - 'dims'      : image dimensions in form <WIDTH>x<HEIGHT>
+                - 'camera'    : camera name
+                - 'lens'      : lens name
+                - 'iso'       : ISO value
+                - 'focal'     : focal lens
+                - 'aperture'  : aperture lens
+                - 'speed'     : speed shutter
+                - 'creator'   : photo creator
+                - 'caption'   : photo caption
             criterias :
-                - 'name'       : (str) filename without extension
-                - 'exactname'  : (str) filename insensitive without extension
-                - 'ext'        : (str) file extension
-                - 'id'         : (int) photo id (Adobe_images.id_local)
-                - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
-                - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note. ex: "rating==5"
-                - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
-                - 'datecapt'   : (str) operation (<,<=,>, >=) and capture date
-                - 'datemod'    : (str)  operation (<,<=,>, >=) and lightroom modification date
-                - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
-                - 'videos'     : (bool) type videos
-                - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
-                - 'keyword'    : (str) keyword name
-                - 'import'     : (int) import id
-                - 'stacks'     : operation on stacks in :
-                     'only' = selects only the photos in stacks
-                     'none' = excludes the photos in stacks
-                     'one'  = excludes the photos in stacks not at first position
+                - 'name'      : (str) filename without extension
+                - 'exactname' : (str) filename insensitive without extension
+                - 'ext'       : (str) file extension
+                - 'id'        : (int) photo id (Adobe_images.id_local)
+                - 'uuid'      : (string) photo UUID (Adobe_images.id_global)
+                - 'rating'    : (str) [operator (<,<=,>,=, ...)] and rating/note. ex: "rating==5"
+                - 'colorlabel': (str) color and label. Color names are localized (Bleu, Rouge,...)
+                - 'creator'   : (str) photo creator
+                - 'caption'   : (true/false/str) photo caption
+                - 'datecapt'  : (str) operator (<,<=,>, >=) and capture date
+                - 'datemod'   : (str) operator (<,<=,>, >=) and lightroom modification date
+                - 'iso'       : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
+                - 'focal'     : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
+                - 'aperture'  : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
+                - 'speed'     : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
+                - 'width'     : (int) cropped image width. Need to include column "dims"
+                - 'height     : (int) cropped image height. Need to include column "dims"
+                - 'videos'    : (bool) type videos
+                - 'exifindex' : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
+                - 'vcopies'   : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
+                - 'keyword'   : (str) keyword name. Only one keyword can be specified in request
+                - 'import'    : (int) import id
+                - 'stacks'    : operation on stacks in :
+                        'only' = selects only the photos in stacks
+                        'none' = excludes the photos in stacks
+                        'one'  = excludes the photos in stacks not at first position
                 - 'metastatus' :  metadatas status
-                     'conflict' = metadatas different on disk from db
-                     'changedondisk' = metadata changed externally on disk
-                     'hasbeenchanged' = to be save on disk
-                     'conflict' = metadatas different on disk from db
-                     'uptodate' = uptodate, in error, or to write on disk
-                     'unknown' = write error, phot missing ...
+                        'conflict' = metadatas different on disk from db
+                        'changedondisk' = metadata changed externally on disk
+                        'hasbeenchanged' = to be save on disk
+                        'conflict' = metadatas different on disk from db
+                        'uptodate' = uptodate, in error, or to write on disk
+                        'unknown' = write error, phot missing ...
                 - 'idcollection' : (int) collection id
-                - 'collection' : (str) collection name
-                - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
-                - 'iso'        : ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
-                - 'focal'      : focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
-                - 'aperture'   : aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
-                - 'speed'      : speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
-                - 'sort'       : sql sort string
-                - 'distinct'   : suppress similar lines of results
+                - 'collection': (str) collection name
+                - 'extfile'   : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
+                - 'sort'      : sql sort string
+                - 'distinct'  : suppress similar lines of results
 
     For collection : specify the "columns" to display and the "criteria" of selection in :
             columns :
@@ -169,6 +176,9 @@ It build SQL SELECT request from 2 strings describing informations to display, a
                 - 'id4smart  ': (int) id smart collection. To be used with column "smart"
                 - 'name4smart': (str) name of smart collection. To be used with column "smart"
 
+    Examples:
+            lrselect.py --sql --results "basename,datecapt" "rating=>4,video=0"
+            lrselect.py  "name,datecapt,exif=var:gpslatitude,keywords" "rating=>4,videos=0" --results --count
 
     positional arguments:
     columns               Columns to display
@@ -186,8 +196,14 @@ It build SQL SELECT request from 2 strings describing informations to display, a
     -f FILE, --file FILE  UUIDs photos file : replace the criteria parameter which is ignored. All parameters are ignored
     -t {photo,collection}, --table {photo,collection}
                             table to work on : photo or collection
-    -N, --no_header       don't print header (columns names)
+    -N, --no_header       don't print header (photos count ans columns names)
+    -w WIDTHS, --widths WIDTHS
+                            Widths of columns to display widths (ex:30,-50,10)
+    -S SEPARATOR, --separator SEPARATOR
+                            separator string between columns (default:" | ")
     --raw_print           print raw value (for speed, aperture columns)
+    --log LOG             log on file
+
 
 
 
@@ -273,6 +289,11 @@ Unfortunaly :
                         [smart_name [smart_name ...]]
 
         Execute smart collections from Lightroom catalog or from a exported file
+        Supported criteria are : all, aperture, aspectRatio, camera, captureTime,
+          collection, colorMode, creator, exif, fileFormat, filename, flashFired,
+          focalLength, hasAdjustments, hasGPSData, heightCropped, iptc, isoSpeedRating,
+          keywords, labelColor, labelText, lens, metadata, metadataStatus, rating,
+          shutterSpeed, touchTime, treatment, widthCropped
 
         positional arguments:
         smart_name            Name of smart(s) collection

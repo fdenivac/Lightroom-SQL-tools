@@ -66,8 +66,11 @@ DEFAULT_SPECS = {
     'focal'     : ('%6s', None),
     'aperture'  : ('%5s', display_aperture),
     'speed'     : ('%6s', display_speed),
+    'creator'   : ('%18s', None),
+    'caption'   : ('%-30s', None),
+    'dims'      : ('%-10s', None),
 }
-SEPARATOR = ' | '
+DEFAULT_SEPARATOR = ' | '
 
 
 def prepare_display_columns(columns, widths):
@@ -103,6 +106,7 @@ def display_results(rows, columns, **kwargs):
        * header : display header (columns names)
        * indent : number of indentation space on each line
        * widths : widths of columns
+       * separator : characters separator between columns
        * raw_print : print raw value (for columns aperture, shutter speed, ido, dates)
     '''
     if not rows and kwargs.get('header', True):
@@ -110,6 +114,7 @@ def display_results(rows, columns, **kwargs):
         return
 
     indent = kwargs.get('indent', 4)
+    separator = kwargs.get('separator', DEFAULT_SEPARATOR)
     wanted_lines = kwargs.get('max_lines', 0)
     if wanted_lines == 0 or wanted_lines >= len(rows):
         max_lines = len(rows)
@@ -126,14 +131,15 @@ def display_results(rows, columns, **kwargs):
     if kwargs.get('header', True):
         total_width = 0
         line = []
+
         for num_col in range(0, len(column_spec)):
             name, width, _ = column_spec[num_col]
             val_width = int(''.join([char for char in width if char.isdigit()]))
             total_width += val_width
             name = name[:val_width]
             line.append(width % name)
-        print(indent * ' ', SEPARATOR.join(line), sep='')
-        print(indent * ' ', (total_width + (len(column_spec) - 1) * len(SEPARATOR)) * '=', sep='')
+        print(indent * ' ', separator.join(line), sep='')
+        print(indent * ' ', (total_width + (len(column_spec) - 1) * len(separator)) * '=', sep='')
 
     # display datas
     for num in range(0, max_lines):
@@ -141,12 +147,16 @@ def display_results(rows, columns, **kwargs):
             break
         line = []
         for num_col, value in enumerate(rows[num]):
-            _, width, func_format = column_spec[num_col]
+            try:
+                _, width, func_format = column_spec[num_col]
+            except KeyError:
+                # invisible column (ex: criteria width/heightCropped)
+                continue
             if not kwargs.get('raw_print', False):
                 if value is None:
                     value = ''
                 elif func_format:
                     value = func_format(value)
             line.append(width % value)
-        print(indent * ' ', SEPARATOR.join(line), sep='')
+        print(indent * ' ', separator.join(line), sep='')
     print()
