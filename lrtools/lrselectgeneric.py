@@ -7,6 +7,7 @@ Base class for building simple SQL select from a table
 
 '''
 
+import re
 import logging
 from datetime import datetime
 from dateutil import parser
@@ -21,15 +22,21 @@ class LRSelectException(Exception):
     ''' LRSelect Exception '''
 
 
+# sqlite date modifiers accordigf parts of date string
+STARTS_OF_DATE = {
+    1: 'start of year',
+    2: 'start of month',
+    3: 'start of day',
+}
+
 
 def parsedate(date):
     ''' return datetime from string '''
     if isinstance(date, str):
-        return parser.parse(date, dayfirst=lrt_config.dayfirst)
-    elif isinstance(date, datetime):
+        return parser.parse(date, default=datetime(1900, 1, 1, 0, 0, 0), dayfirst=lrt_config.dayfirst)
+    if isinstance(date, datetime):
         return date
-    else:
-        return None
+    return None
 
 def to_bool(value):
     ''' convert value to bool (true, false, 1, 0) '''
@@ -94,6 +101,7 @@ class LRSelectGeneric():
         '''
         self.lrdb = lrdb
         self.from_table = 'FROM %s' % main_table
+        self.froms = None
         self.column_description = columns
         self.criteria_description = criteria
 
@@ -119,7 +127,9 @@ class LRSelectGeneric():
         date = parsedate(value)
         if not date:
             raise LRSelectException('Incorrect date')
-        return oper, date
+        # value is it year, month/year or day/month/year ?
+        nparts = len(re.findall(r'\d+', value))
+        return 'DATE(i.captureTime, "{0}") {1} DATE("{2}", "{0}")'.format(STARTS_OF_DATE[nparts], oper, date)
 
     def func_oper_date_to_lrstamp(self, value):
         ''' value is a lightrom timestamp '''
@@ -286,7 +296,7 @@ class LRSelectGeneric():
         log.info('select_generic("%s" "%s")', columns, criters)
 
         fields = []
-        froms = [self.from_table]
+        self.froms = [self.from_table]
         wheres = []
         sort = ''
         nb_wheres = {}
@@ -326,7 +336,7 @@ class LRSelectGeneric():
                 if isinstance(_from, str):
                     _from = [_from]
                 _from = [_f.replace('<NUM>', '%s' % nb_wheres[key]) for  _f in _from]
-                self._add_from(_from, froms)
+                self._add_from(_from, self.froms)
             _where = _where.replace('<NUM>', '%s' % nb_wheres[key])
             if '%s' in _where:
                 _where = _where % value
@@ -335,7 +345,7 @@ class LRSelectGeneric():
         #
         # process columns :
         #
-        self.columns_to_sql(columns, fields, froms)
+        self.columns_to_sql(columns, fields, self.froms)
 
         #
         # finalize request
@@ -344,7 +354,7 @@ class LRSelectGeneric():
             fields = ', '.join(fields)
         else:
             fields = 'rf.absolutePath || fo.pathFromRoot || fi.baseName || "." || fi.extension '
-        froms = ' '.join(froms)
+        self.froms = ' '.join(self.froms)
         if wheres:
             wheres = 'WHERE %s' % ' AND '.join(wheres)
         else:
@@ -355,7 +365,7 @@ class LRSelectGeneric():
         elif not select_type:
             select_type = 'SELECT'
 
-        sql = '%s  %s %s %s %s' % (select_type, fields, froms, wheres, sort)
+        sql = '%s  %s %s %s %s' % (select_type, fields, self.froms, wheres, sort)
         log.info('SQL = %s', sql)
         if kwargs.get('debug') or kwargs.get('print'):
             print('SQL =', sql)

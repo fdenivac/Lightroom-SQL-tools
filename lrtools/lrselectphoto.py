@@ -37,7 +37,6 @@ class LRSelectPhoto(LRSelectGeneric):
                 'base': [ 'fi.baseName AS name', ['LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local' ] ], \
                 True :  [ 'fi.baseName || "." || fi.extension AS name', [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local' ] ], \
                 'basext': ['fi.baseName || "." || fi.extension AS name', [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local'] ], \
-        #            'basextcopy': ['fi.baseName || i.copyName || "." || fi.extension AS name', [ 'JOIN AgLibraryFile fi ON i.rootFile = fi.id_local'] ], \
                 }, \
             'vname' : { \
                 True : [ 'i.copyName AS vname',  None ] }, \
@@ -169,7 +168,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'datecapt' : [ \
                     '', \
-                    'i.captureTime %s "%s"', self.func_oper_parsedate, \
+                    '%s', self.func_oper_parsedate,
                     ],
                 # fromdatecapt obsolete replaced by datecapt
                 'fromdatecapt' : [ \
@@ -288,12 +287,16 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'stacks' : [ \
                     'LEFT JOIN AgLibraryFolderStackImage fsi ON i.id_local = fsi.image', \
-                    'fsi.position %s', self.func_stacks,
+                    '%s', self.func_stacks,
                     ],
                 'keyword' : [ \
                     ['LEFT JOIN AgLibraryKeywordImage kwi<NUM> ON i.id_local = kwi<NUM>.image', \
                     ' LEFT JOIN AgLibraryKeyword kw<NUM> ON kw<NUM>.id_local = kwi<NUM>.tag'], \
-                    'kw<NUM>.name LIKE"%s"',
+                    'kw<NUM>.name LIKE "%s"',
+                    ],
+                'haskeywords' : [ \
+                    '', \
+                    '%s', self.func_haskeywords, \
                     ],
                 'exifindex' : [ \
                     'LEFT JOIN AgMetadataSearchIndex msi ON i.id_local = msi.image', \
@@ -316,13 +319,13 @@ class LRSelectPhoto(LRSelectGeneric):
         ''' specific value for metastatus '''
         if value == 'unknown':
             return 'am.externalXmpIsDirty = 0 AND i.sidecarStatus = 2.0'
-        elif value == 'changedondisk':
+        if value == 'changedondisk':
             return 'am.externalXmpIsDirty=1 and (i.sidecarStatus = 2.0 or i.sidecarStatus = 0.0)'
-        elif value == 'hasbeenchanged':
+        if value == 'hasbeenchanged':
             return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 1.0'
-        elif value == 'conflict':
+        if value == 'conflict':
             return 'am.externalXmpIsDirty=1 and i.sidecarStatus = 1.0'
-        elif value == 'uptodate':
+        if value == 'uptodate':
             return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 0.0'
         else:
             raise LRSelectException('invalid "metastatus" value "%s"' % value)
@@ -331,10 +334,10 @@ class LRSelectPhoto(LRSelectGeneric):
         ''' specific value for photos stack '''
         if value == 'only':
             return 'fsi.position=1.0'
-        elif value == 'none':
+        if value == 'none':
             return 'fsi.image is NULL'
-        elif value == 'one':
-            return 'fsi.image is NULL OR fsi.position=1.0'
+        if value == 'one':
+            return '(fsi.image is NULL OR fsi.position=1.0)'
         else:
             raise LRSelectException('invalid "stacks" value "%s"' % value)
 
@@ -391,6 +394,18 @@ class LRSelectPhoto(LRSelectGeneric):
             raise LRSelectException(_e)
         return value
 
+    def func_haskeywords(self, value):
+        '''
+        select photos with or without keywords
+        '''
+        if value in ['True', '1']:
+            return 'i.id_local IN (SELECT DISTINCT kwi.image FROM AgLibraryKeywordImage kwi)'
+        if value in ['False', '0']:
+            self._add_from(['LEFT JOIN AgLibraryKeywordImage kwi1 ON i.id_local = kwi1.image'], self.froms)
+            return 'kwi1.image IS NULL'
+        else:
+            raise LRSelectException('invalid haskeywords value')
+
 
     def select_generic(self, columns, criters='', **kwargs):
         '''
@@ -439,10 +454,12 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'speed'     : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
             - 'width'     : (int) cropped image width. Need to include column "dims"
             - 'height     : (int) cropped image height. Need to include column "dims"
+            - 'gps'       : (bool) has GPS datas
             - 'videos'    : (bool) type videos
             - 'exifindex' : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
             - 'vcopies'   : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
             - 'keyword'   : (str) keyword name. Only one keyword can be specified in request
+            - 'haskeywords': (bool) photos with or without keywords
             - 'import'    : (int) import id
             - 'stacks'    : operation on stacks in :
                     'only' = selects only the photos in stacks
