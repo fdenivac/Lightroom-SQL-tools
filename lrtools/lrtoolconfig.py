@@ -67,8 +67,8 @@ class LRToolConfig(metaclass=Singleton):
                     'DayFirst' : True, \
                 })
 
-        # config file is located in "../lrtools"
-        config_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', CONFIG_FILENAME)
+        # config file is located in directory where main script is lauched
+        config_file = os.path.join(os.path.dirname(sys.argv[0]), CONFIG_FILENAME)      
         dataset = parser.read(config_file)
         try:
             self.default_lrcat = parser.get(CONFIG_MAIN, 'LRCatalog')
