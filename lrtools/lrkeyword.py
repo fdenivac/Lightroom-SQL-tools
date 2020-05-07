@@ -51,6 +51,8 @@ class LRKeywords():
         '''
         if not self.tree:
             self._init_hierarchical_keywords()
+        if not pid:
+            pid = self.rootid
         for k in self.tree[pid]:
             print(level * ' ', self.id2keyname[k])
             if k in self.tree:
