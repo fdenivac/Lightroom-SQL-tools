@@ -162,7 +162,7 @@ class LRSelectGeneric():
         elif value in ['1', 'true']:
             value = '1'
         else:
-            raise LRSelectException('invalid gps criterion value')
+            raise LRSelectException('invalid hasgps criterion value')
         return value
 
     def func_value_or_null(self, value):

@@ -8,30 +8,35 @@ Python scripts to retrieve and displays photos informations from lightroom catal
 * Options for display sql request, result count, results
 
 
-## Environment
-* OS windows 7 64 bits
+## Tested environment
+* OS windows 10 64 bits
 * Lightroom 6.x
-* Python 3.x
+* Python 3.7
 * Scripts running under windows console or cygwin
 
 
-## Configuration
+## Installation
+* run "``pip install git+https://github.com/fdenivac/Lightroom-SQL-tools``"
+<br>or<br>
+* download *[zip file project ](https://github.com/fdenivac/Lightroom-SQL-tools/archive/master.zip)*
+* extract zip file and execute in main directory "``python setup.py install``"
 
+Scripts (``lrselect.py`` and ``lrsmart.py``) are installed in *Scripts* directory of python
+
+## Configuration
 Modify the config file *lrtools.ini* :
 * LRCatalog : the default Lightroom catalog to use
-* DayFirst :  for parsing date format (DD-MM-YY or YY-MM-DD)
+* DayFirst :  parsing date format ("DD-MM-YY" if True, else  "YY-MM-DD")
 
 </br>
 </br>
-</br>
-
 
 ## **lrselect** script
 Retrieves and displays various informations about photos or collections
 
 It build SQL SELECT request from 2 strings describing informations to display, and criteria to search
 
-    usage: lrselect.py [OPTIONS] columns criteria
+    ``usage: lrselect.py [OPTIONS] columns criteria``
 
 * Options for display sql request, result count, partial results
 * Jokers "%" can be used in criterion of type string (ex:name=%ab%)
@@ -41,14 +46,14 @@ It build SQL SELECT request from 2 strings describing informations to display, a
 
 ### Some examples
 
-* photos shooted with camera RX100 between may and august 2018, and modified in lightroom since august 2019:
+* photos taken around Paris, with camera RX100, between may and august 2018, and modified in lightroom since august 2019:
 
-        lrselect.py "name, focal, speed, aperture, keywords" "datecapt=>=1-5-2018, datecapt=<=1-7-2018, datemod=>=1-8-2019, camera=%rx100%" -n 2
+        lrselect.py "name, focal, speed, aperture, keywords" "gps=paris+10, camera=%rx100%, datecapt=>=1-5-2018, datecapt=<=1-7-2018, datemod=>=1-8-2019"
         * Photo results (2 photos) :
             name                 | focal |  speed  | apert | keywords
             ===========================================================
-            RX100_01399.tif      |  10.89 |  1/160 |  F5.6 | family,boat
-            RX100_01598.DNG      |    8.8 |   1/80 |  F5.0 | family,beach,sea
+            RX100_01399.tif      |  10.89 |  1/160 |  F5.6 | family,paris
+            RX100_01598.DNG      |    8.8 |   1/80 |  F5.0 | museum,paris
 
 * photos with specific name, iso > 1600, focal > 200mm and aperture > F/8 :
 
@@ -89,8 +94,8 @@ It build SQL SELECT request from 2 strings describing informations to display, a
 ### Complete Help :
 
     usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-n MAX_LINES] [-f FILE]
-                    [-t {photo,collection}] [-N] [-w WIDTHS] [-S SEPARATOR]
-                    [--raw_print] [--log LOG]
+                    [-t {photo,collection}] [-N] [--raw_print]
+                    [--log LOG]
                     [columns] [criteria]
 
     Select elements from SQL table from Lightroom catalog.
@@ -98,30 +103,27 @@ It build SQL SELECT request from 2 strings describing informations to display, a
     For photo : specify the "columns" to display and the "criteria of selection in :
             columns :
                 - 'name'='base'|'basext'|'full' : base name, basename + extension, full name (path,name, extension)
-                - 'id'        : id photo (Adobe_images.id_local)
-                - 'uuid'      : UUID photo (Adobe_images.id_global)
-                - 'rating'    : rating/note
-                - 'colorlabel': color and label
-                - 'datemod'   : modificaton date
-                - 'datecapt'  : capture date
-                - 'modcount'  : number of modifications
-                - 'master'    : master image of virtual copy
-                - 'xmp'       : all xmp metadatas
-                - 'vname'     : virtual copy name
-                - 'stackpos'  : position in stack
-                - 'keywords'  : keywords list
-                - 'collections' : collections list
-                - 'exif'      : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
-                - 'extfile'   : extension of an external/extension file (jpg,xmp,...)
-                - 'dims'      : image dimensions in form <WIDTH>x<HEIGHT>
-                - 'camera'    : camera name
-                - 'lens'      : lens name
-                - 'iso'       : ISO value
-                - 'focal'     : focal lens
-                - 'aperture'  : aperture lens
-                - 'speed'     : speed shutter
-                - 'creator'   : photo creator
-                - 'caption'   : photo caption
+                - 'id'         : id photo (Adobe_images.id_local)
+                - 'uuid'       : UUID photo (Adobe_images.id_global)
+                - 'rating'     : rating/note
+                - 'colorlabel' : color and label
+                - 'datemod'    : modificaton date
+                - 'datecapt'   : capture date
+                - 'modcount'   : number of modifications
+                - 'master'     : master image of virtual copy
+                - 'xmp'        : all xmp metadatas
+                - 'vname'      : virtual copy name
+                - 'stackpos'   : position in stack
+                - 'keywords'   : keyword list
+                - 'collections': collections list
+                - 'exif'       : 'var:"COL1 COL2 ..." : exif metadatas (AgHarvestedExifMetadata). Ex: "exif=var:hasgps"
+                - 'extfile'    : extension of an external/extension file (jpg,xmp,...)
+                - 'camera'     : camera name
+                - 'lens'       : lens name
+                - 'iso'        : ISO value
+                - 'focal'      : focal lens
+                - 'aperture'   : aperture lens
+                - 'speed'      : speed shutter
             criterias :
                 - 'name'      : (str) filename without extension
                 - 'exactname' : (str) filename insensitive without extension
@@ -140,10 +142,15 @@ It build SQL SELECT request from 2 strings describing informations to display, a
                 - 'speed'     : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
                 - 'width'     : (int) cropped image width. Need to include column "dims"
                 - 'height     : (int) cropped image height. Need to include column "dims"
+                - 'hasgps'    : (bool) has GPS datas
+                - 'gps'       : (str) GPS rectangle defined by :
+                                - town or coordinates, and a square side in kilometer (ex:"paris+20", "45.7578;4.8320+10")
+                                - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
                 - 'videos'    : (bool) type videos
                 - 'exifindex' : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
                 - 'vcopies'   : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
                 - 'keyword'   : (str) keyword name. Only one keyword can be specified in request
+                - 'haskeywords': (bool) photos with or without keywords
                 - 'import'    : (int) import id
                 - 'stacks'    : operation on stacks in :
                         'only' = selects only the photos in stacks
@@ -176,9 +183,6 @@ It build SQL SELECT request from 2 strings describing informations to display, a
                 - 'id4smart  ': (int) id smart collection. To be used with column "smart"
                 - 'name4smart': (str) name of smart collection. To be used with column "smart"
 
-    Examples:
-            lrselect.py --sql --results "basename,datecapt" "rating=>4,video=0"
-            lrselect.py  "name,datecapt,exif=var:gpslatitude,keywords" "rating=>4,videos=0" --results --count
 
     positional arguments:
     columns               Columns to display
@@ -196,14 +200,8 @@ It build SQL SELECT request from 2 strings describing informations to display, a
     -f FILE, --file FILE  UUIDs photos file : replace the criteria parameter which is ignored. All parameters are ignored
     -t {photo,collection}, --table {photo,collection}
                             table to work on : photo or collection
-    -N, --no_header       don't print header (photos count ans columns names)
-    -w WIDTHS, --widths WIDTHS
-                            Widths of columns to display widths (ex:30,-50,10)
-    -S SEPARATOR, --separator SEPARATOR
-                            separator string between columns (default:" | ")
+    -N, --no_header       don't print header (columns names)
     --raw_print           print raw value (for speed, aperture columns)
-    --log LOG             log on file
-
 
 
 

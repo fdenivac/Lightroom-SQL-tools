@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from .lrselectgeneric import date_to_lrstamp
 from .lrkeyword import LRKeywords
 from .lrselectcollection import LRSelectCollection
+from .slpp import SLPP
+
 
 class SmartException(Exception):
     ''' SQLSmartColl Exception '''
@@ -648,3 +650,37 @@ class SQLSmartColl():
         for _k, _v in list(self.smart.items()):
             smart_str += '%s = %s\n' % (_k, _v)
         return smart_str
+
+
+
+def select_smart(lrdb, smart_name, columns, is_file=False):
+    '''
+    Execute smart collection :
+       build SQL string from lua source
+       execute and
+    return rows
+    '''
+    if is_file:
+        smart = open(smart_name, 'r').read()
+        smart = smart[smart.find('{'):]
+        # smart = smart[4:]
+        lua = SLPP()
+        smart = lua.decode(smart)
+        if not smart or 'value' not in smart:
+            raise TypeError
+        if 'title' in smart:
+            smart_title = smart['title']
+        else:
+            smart_title = smart_name
+        print(' * Collection name : "%s"' % (smart_title))
+        smart = smart['value']
+
+    else:
+        smart = lrdb.get_smartcoll_data(smart_name)
+        if not smart:
+            raise OSError
+
+    builder = SQLSmartColl(lrdb, smart)
+    sql = builder.build_sql(columns)
+    lrdb.cursor.execute(sql)
+    return lrdb.cursor.fetchall()

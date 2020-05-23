@@ -6,8 +6,12 @@
 LRSelectPhoto class for building SQL select for table Adobe_images
 '''
 
-from math import log
+import math
+import re
+import logging
+
 from .lrselectgeneric import LRSelectGeneric, LRSelectException
+from .gps import geocodage, square_around_location
 
 class LRSelectPhoto(LRSelectGeneric):
     '''
@@ -125,6 +129,10 @@ class LRSelectPhoto(LRSelectGeneric):
             'caption' : { \
                 True : [ 'iptc.caption',\
                         ['LEFT JOIN AgLibraryIPTC iptc on i.id_local = iptc.image'] ] }, \
+            'latitude' : { \
+                True : [ 'em.GpsLatitude',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+            'longitude' : { \
+                True : [ 'em.GpsLongitude',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
             'exif' : { \
                 LRSelectGeneric._VAR_FIELD: \
                     [   None,
@@ -258,9 +266,13 @@ class LRSelectPhoto(LRSelectGeneric):
                     ['LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local'], \
                     'CAST(substr(dims, instr(dims, "x")+1) AS int) %s',
                     ],
-                'gps' : [ \
+                'hasgps' : [ \
                     ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'], \
                     'em.hasGps = %s', self.func_0_1,
+                    ],
+                'gps' : [ \
+                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'], \
+                    '%s', self.func_gps,
                     ],
                 'import' : [ \
                     ['LEFT JOIN AgLibraryImportImage impim on  i.id_local = impim.image', \
@@ -375,7 +387,7 @@ class LRSelectPhoto(LRSelectGeneric):
             raise LRSelectException('invalid aperture value')
         if not oper:
             oper = '='
-        return '%s %s' % (oper, 2 * log(int(value), 2))
+        return '%s %s' % (oper, 2 * math.log(int(value), 2))
 
     def func_speed(self, value):
         '''
@@ -389,7 +401,7 @@ class LRSelectPhoto(LRSelectGeneric):
                 break
         try:
             value = eval(value)
-            value = '%s %s' % (oper, log(float(1/value), 2))
+            value = '%s %s' % (oper, math.log(float(1/value), 2))
         except ValueError as _e:
             raise LRSelectException(_e)
         return value
@@ -403,8 +415,52 @@ class LRSelectPhoto(LRSelectGeneric):
         if value in ['False', '0']:
             self._add_from(['LEFT JOIN AgLibraryKeywordImage kwi1 ON i.id_local = kwi1.image'], self.froms)
             return 'kwi1.image IS NULL'
+        raise LRSelectException('invalid haskeywords value')
+
+    def func_gps(self, value):
+        '''
+        select photos within gps values
+            ex: value=paris/lyon
+        '''
+        def reorder(val1, val2):
+            return min(val1, val2), max(val1, val2)
+
+        log = logging.getLogger()
+        re_gpsw = re.compile(r'([\d\-\.]+);([\d\-\.]+)\+(\d+)')                    # 45.78;-2.54+100
+        re_2gps = re.compile(r'([\d\-\.]+);([\d\-\.]+)/([\d\-\.]+);([\d\-\.]+)')   # 45.78;-2.51/46.01;1.05
+        re_townw = re.compile(r'([\w\'\ -;]+)\+(\d+)')                              # paris+50
+        re_2town = re.compile(r'([\w\'\ -]+)/([\w\'\ -]+)')                        # paris/geneve
+
+        if re_gpsw.match(value):
+            lat, lon, width = re_gpsw.match(value).groups()
+            (lat1, lon1), (lat2, lon2) = square_around_location(lat, lon, width)
+        elif re_2gps.match(value):
+            lat1, lon1, lat2, lon2 = re_2gps.match(value).groups()
+        elif re_townw.match(value):
+            town, width = re_townw.match(value).groups()
+            try:
+                (lat, lon), address = geocodage(town)
+                log.info('Geocodage for %s : %s, %s (%s)', town, lat, lon, address)
+            except TypeError:
+                raise LRSelectException('Town coordinates not found')
+            (lat1, lon1), (lat2, lon2) = square_around_location(lat, lon, width)
+        elif re_2town.match(value):
+            town1, town2 = re_2town.match(value).groups()
+            try:
+                (lat1, lon1), address1 = geocodage(town1)
+                (lat1, lon2), address2 = geocodage(town2)
+                log.info('Geocodage for %s : %s, %s (%s)', town1, lat1, lon1, address1)
+                log.info('Geocodage for %s : %s, %s (%s)', town2, lat2, lon2, address2)
+            except TypeError:
+                raise LRSelectException('Town coordinates not found')
         else:
-            raise LRSelectException('invalid haskeywords value')
+            raise LRSelectException('GPS coordinates malformed')
+
+        lat1, lat2 = reorder(lat1, lat2)
+        lon1, lon2 = reorder(lon1, lon2)
+        return '(em.hasGps = 1 AND em.gpsLatitude BETWEEN %s AND %s AND em.gpsLongitude BETWEEN %s AND %s)' % \
+                (lat1, lat2, lon1, lon2)
+
 
 
     def select_generic(self, columns, criters='', **kwargs):
@@ -434,6 +490,8 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'focal'     : focal lens
             - 'aperture'  : aperture lens
             - 'speed'     : speed shutter
+            - 'latitude'  : GPS latitude
+            - 'longitude' : GPS longitude
             - 'creator'   : photo creator
             - 'caption'   : photo caption
         criterias :
@@ -454,7 +512,10 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'speed'     : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
             - 'width'     : (int) cropped image width. Need to include column "dims"
             - 'height     : (int) cropped image height. Need to include column "dims"
-            - 'gps'       : (bool) has GPS datas
+            - 'hasgps'    : (bool) has GPS datas
+            - 'gps'       : (str) GPS rectangle defined by :
+                                - town or coordinates, and bound in kilometer (ex:"paris+20", "45.7578;4.8320+10"),
+                                - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
             - 'videos'    : (bool) type videos
             - 'exifindex' : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
             - 'vcopies'   : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM

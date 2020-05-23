@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable=line-too-long
 """
@@ -53,7 +53,7 @@ def main():
     # add examples
     description += '\nExamples:\n' \
             '\tlrselect.py --sql --results "basename,datecapt" "rating=>4,video=0"\n' \
-            '\tlrselect.py  "name,datecapt,exif=var:gpslatitude,keywords" "rating=>4,videos=0" --results --count'
+            '\tlrselect.py  "name,datecapt,latitude,longitude,keywords" "rating=>4,videos=0" --results --count'
 
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=RawTextHelpFormatter)

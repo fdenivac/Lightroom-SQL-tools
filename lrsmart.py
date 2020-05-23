@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable=line-too-long
 """
@@ -28,7 +28,7 @@ def main():
     # commands parser
     #
     # prepare description
-    criteria = ', '.join([ crit.split('_')[1] for crit in dir(SQLSmartColl) if crit.startswith('criteria_')])
+    criteria = ', '.join([crit.split('_')[1] for crit in dir(SQLSmartColl) if crit.startswith('criteria_')])
     description = 'Execute smart collections from Lightroom catalog or from a exported file.\n'\
                     'Supported criteria are : ' + criteria
     parser = argparse.ArgumentParser(description=description)
@@ -49,7 +49,7 @@ def main():
                                     ' the uuid column must be present)')
     parser.add_argument('-N', '--no_header', action='store_true', help='don\'t print header (columns names)')
     parser.add_argument('-w', '--widths', help='Widths of columns to display widths (ex:30,-50,10)')
-    parser.add_argument('-S', '--separator', default=' | ', help='separator string between columns (default:"%(default)s")' )
+    parser.add_argument('-S', '--separator', default=' | ', help='separator string between columns (default:"%(default)s")')
     parser.add_argument('--raw_print', action='store_true', help='print raw value (for speed, aperture columns)')
     parser.add_argument('--log', help='log on file')
 

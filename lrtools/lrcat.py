@@ -17,9 +17,6 @@ from dateutil import parser
 # config is loaded on import
 from .lrtoolconfig import lrt_config
 
-# for avoid import circular error, move next import after date_to_lrstamp and lr_strptime :
-#   from .lrselectphoto import LRSelectPhoto
-
 from .slpp import SLPP
 
 # date reference of lightroom (at least for timestamp of photos modified)
@@ -241,7 +238,7 @@ class LRCatDB():
             where = 'creationId="com.adobe.ag.library.smart_collection" OR creationId="com.adobe.ag.library.collection"'
         if collname:
             oper = 'LIKE' if '%' in collname else '='
-            where += ' AND name %s "%s"' % (oper, collname)
+            where += ' AND name %s "%s" COLLATE NOCASE' % (oper, collname)
         self.cursor.execute('SELECT id_local, name, creationId FROM AgLibraryCollection WHERE %s ORDER BY name ASC' % where)
         return self.cursor.fetchall()
 
