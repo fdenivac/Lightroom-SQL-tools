@@ -27,4 +27,5 @@ setup(
     package_dir={'lrtools': 'lrtools'},
     packages=['lrtools'],
     scripts = ['lrtools.ini', 'lrselect.py', 'lrsmart.py' ],
+    install_requires=['geopy',],
 )
