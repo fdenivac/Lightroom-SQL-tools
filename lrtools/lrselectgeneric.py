@@ -110,13 +110,6 @@ class LRSelectGeneric():
     # Some general functions called for convert value key in value sql
     #
 
-    def func_parsedate(self, value):
-        ''' parse a date value '''
-        date = parsedate(value)
-        if not date:
-            raise LRSelectException('Incorrect date')
-        return date
-
     def func_oper_parsedate(self, value):
         ''' parse opration and date value '''
         for index, char in enumerate(value):
@@ -124,12 +117,18 @@ class LRSelectGeneric():
                 oper = value[:index]
                 value = value[index:]
                 break
+        if not oper:
+            raise LRSelectException('None operator for date')
         date = parsedate(value)
         if not date:
             raise LRSelectException('Incorrect date')
         # value is it year, month/year or day/month/year ?
         nparts = len(re.findall(r'\d+', value))
-        return 'DATE(i.captureTime, "{0}") {1} DATE("{2}", "{0}")'.format(STARTS_OF_DATE[nparts], oper, date)
+        if nparts <= 3:
+            sql = 'DATE(i.captureTime, "{0}") {1} DATE("{2}", "{0}")'.format(STARTS_OF_DATE[nparts], oper, date)
+        else:
+            sql = 'i.captureTime {0} "{1}"'.format(oper, date.strftime('%Y-%m-%dT%H:%M:%S'))
+        return sql
 
     def func_oper_date_to_lrstamp(self, value):
         ''' value is a lightrom timestamp '''
@@ -140,15 +139,8 @@ class LRSelectGeneric():
                 break
         dtmod = date_to_lrstamp(value)
         if not dtmod:
-            raise LRSelectException('invalid date value on "fromdatemod"')
+            raise LRSelectException('invalid date value on "datemod"')
         return oper, dtmod
-
-    def func_date_to_lrstamp(self, value):
-        ''' value is a lightrom timestamp '''
-        dtmod = date_to_lrstamp(value)
-        if not dtmod:
-            raise LRSelectException('invalid date value on "fromdatemod"')
-        return dtmod
 
     def func_bool_to_equal(self, value):
         ''' value is boolean '''

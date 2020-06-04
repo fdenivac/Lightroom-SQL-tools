@@ -56,10 +56,10 @@ class LRSelectPhoto(LRSelectGeneric):
                 True : [ 'i.colorlabels AS colorlabel',  None ] }, \
             # modif date (including keywords changes)
             'datemod' : { \
-                True : [ 'strftime("%Y-%m-%dT%H:%M:%S", datetime("2001-01-01",  "+" || i.touchtime || " seconds")) AS datemod',  None ], }, \
+                True : [ 'i.touchtime',  None ], }, \
             # modif date based on history developement steps, ignoring exportations
             'datehist' : { \
-                True : [ '(SELECT strftime("%Y-%m-%dT%H:%M:%S", datetime("2001-01-01",  "+" || max(ids2.datecreated) || " seconds")) '\
+                True : [ '(SELECT max(ids2.datecreated) '\
                             'FROM Adobe_libraryImageDevelopHistoryStep ids2 WHERE ids2.image =i.id_local AND substr(name,1,11) <> "Exportation")',  None ], }, \
             'modcount' : { \
                 True : [ 'i.touchCount AS modcount',  None ] }, \
@@ -90,7 +90,7 @@ class LRSelectPhoto(LRSelectGeneric):
                 }, \
             'collections': { \
                 True :  \
-                    [   '(SELECT GROUP_CONCAT(col.name) FROM AgLibraryCollection col JOIN  AgLibraryCollectionimage ci ON ci.collection = col.id_local'\
+                    [   '(SELECT GROUP_CONCAT(col.name) FROM AgLibraryCollection col JOIN AgLibraryCollectionimage ci ON ci.collection = col.id_local'\
                         ' WHERE ci.image = i.id_local) AS Collections' \
                         '', \
                         None \
@@ -139,6 +139,15 @@ class LRSelectPhoto(LRSelectGeneric):
                         [ 'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image' ] \
                     ] \
                 }, \
+            'pubcollection': { \
+                True : ['pc.name', ['LEFT JOIN AgRemotePhoto rm on i.id_local = rm.photo',
+                                    'LEFT JOIN AgLibraryPublishedCollection pc ON pc.id_local = rm.collection', ]], \
+                },\
+            'pubname' : { \
+                True : [ 'rm.remoteId',  ['LEFT JOIN AgRemotePhoto rm on i.id_local = rm.photo'] ] }, \
+            'pubtime' : { \
+                True : [ '(select substr(rm.url, pos+1) from (select instr(rm.url, "/") as pos))', \
+                        ['LEFT JOIN AgRemotePhoto rm on i.id_local = rm.photo'] ] }, \
             'extfile' : { \
                 True :  \
                     [   'fi.sidecarExtensions AS extfile', None  ] \
@@ -178,29 +187,9 @@ class LRSelectPhoto(LRSelectGeneric):
                     '', \
                     '%s', self.func_oper_parsedate,
                     ],
-                # fromdatecapt obsolete replaced by datecapt
-                'fromdatecapt' : [ \
-                    '', \
-                    'i.captureTime >= "%s"', self.func_parsedate, \
-                    ],
-                # todatecapt obsolete replaced by datecapt
-                'todatecapt' : [ \
-                    '', \
-                    'i.captureTime <= "%s"', self.func_parsedate, \
-                    ],
                 'datemod' : [ \
                     '', \
                     'i.touchtime %s %s', self.func_oper_date_to_lrstamp, \
-                    ],
-                # fromdatemod obsolete replaced by datemod
-                'fromdatemod' : [ \
-                    '', \
-                    'i.touchtime >= %s', self.func_date_to_lrstamp, \
-                    ],
-                # todatemod obsolete replaced by datemod
-                'todatemod' : [ \
-                    '', \
-                    'i.touchtime <= %s', self.func_date_to_lrstamp, \
                     ],
                 'videos' : [ \
                     '', \
@@ -280,14 +269,19 @@ class LRSelectPhoto(LRSelectGeneric):
                     'imp.id_local = %s',
                     ],
                 'idcollection' : [ \
-                    ['LEFT JOIN  AgLibraryCollectionimage ci ON ci.image = i.id_local', \
+                    ['LEFT JOIN AgLibraryCollectionimage ci ON ci.image = i.id_local', \
                     ' LEFT JOIN AgLibraryCollection col ON col.id_local = ci.Collection'],\
                     'col.id_local = %s', \
                     ],
                 'collection' : [ \
-                    ['LEFT JOIN  AgLibraryCollectionimage ci<NUM> ON ci<NUM>.image = i.id_local',
+                    ['LEFT JOIN AgLibraryCollectionimage ci<NUM> ON ci<NUM>.image = i.id_local',
                      'LEFT JOIN AgLibraryCollection col<NUM> ON col<NUM>.id_local = ci<NUM>.Collection'],\
                     'col<NUM>.name LIKE "%s"', \
+                    ],
+                'pubcollection' : [ \
+                    ['LEFT JOIN AgLibraryPublishedCollectionImage pci ON pci.image = i.id_local',
+                    ],\
+                    '%s', self.func_published, \
                     ],
                 'metastatus' : [ \
                     ['LEFT JOIN Adobe_AdditionalMetadata am on i.id_local = am.image'], \
@@ -461,6 +455,14 @@ class LRSelectPhoto(LRSelectGeneric):
         return '(em.hasGps = 1 AND em.gpsLatitude BETWEEN %s AND %s AND em.gpsLongitude BETWEEN %s AND %s)' % \
                 (lat1, lat2, lon1, lon2)
 
+    def func_published(self, value):
+        '''
+        select photos published
+        '''
+        if value == 'True':
+            return 'i.id_local = pci.image'
+        return '(i.id_local = pci.image AND pc.name = "%s" COLLATE NOCASE)' % value
+
 
 
     def select_generic(self, columns, criters='', **kwargs):
@@ -494,6 +496,9 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'longitude' : GPS longitude
             - 'creator'   : photo creator
             - 'caption'   : photo caption
+            - 'pubname'   : remote path and name of published photo
+            - 'pubcollection' : name of publish collection
+            - 'pubtime'   : published datetime in seconds from 2001-1-1
         criterias :
             - 'name'      : (str) filename without extension
             - 'exactname' : (str) filename insensitive without extension
@@ -535,6 +540,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     'unknown' = write error, phot missing ...
             - 'idcollection' : (int) collection id
             - 'collection': (str) collection name
+            - 'pubcollection: (str) publish collection name
             - 'extfile'   : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
             - 'sort'      : sql sort string
             - 'distinct'  : suppress similar lines of results

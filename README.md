@@ -102,28 +102,36 @@ It build SQL SELECT request from 2 strings describing informations to display, a
 
     For photo : specify the "columns" to display and the "criteria of selection in :
             columns :
-                - 'name'='base'|'basext'|'full' : base name, basename + extension, full name (path,name, extension)
-                - 'id'         : id photo (Adobe_images.id_local)
-                - 'uuid'       : UUID photo (Adobe_images.id_global)
-                - 'rating'     : rating/note
-                - 'colorlabel' : color and label
-                - 'datemod'    : modificaton date
-                - 'datecapt'   : capture date
-                - 'modcount'   : number of modifications
-                - 'master'     : master image of virtual copy
-                - 'xmp'        : all xmp metadatas
-                - 'vname'      : virtual copy name
-                - 'stackpos'   : position in stack
-                - 'keywords'   : keyword list
-                - 'collections': collections list
-                - 'exif'       : 'var:"COL1 COL2 ..." : exif metadatas (AgHarvestedExifMetadata). Ex: "exif=var:hasgps"
-                - 'extfile'    : extension of an external/extension file (jpg,xmp,...)
-                - 'camera'     : camera name
-                - 'lens'       : lens name
-                - 'iso'        : ISO value
-                - 'focal'      : focal lens
-                - 'aperture'   : aperture lens
-                - 'speed'      : speed shutter
+                - 'name'='base'|'basext'|'full' : base name, basename + extension, full name (path,name, extension)               
+                - 'id'        : id photo (Adobe_images.id_local)
+                - 'uuid'      : UUID photo (Adobe_images.id_global)
+                - 'rating'    : rating/note
+                - 'colorlabel': color and label
+                - 'datemod'   : modificaton date
+                - 'datecapt'  : capture date
+                - 'modcount'  : number of modifications
+                - 'master'    : master image of virtual copy
+                - 'xmp'       : all xmp metadatas
+                - 'vname'     : virtual copy name
+                - 'stackpos'  : position in stack
+                - 'keywords'  : keywords list
+                - 'collections' : collections list
+                - 'exif'      : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
+                - 'extfile'   : extension of an external/extension file (jpg,xmp,...)
+                - 'dims'      : image dimensions in form <WIDTH>x<HEIGHT>
+                - 'camera'    : camera name
+                - 'lens'      : lens name
+                - 'iso'       : ISO value
+                - 'focal'     : focal lens
+                - 'aperture'  : aperture lens
+                - 'speed'     : speed shutter
+                - 'latitude'  : GPS latitude
+                - 'longitude' : GPS longitude
+                - 'creator'   : photo creator
+                - 'caption'   : photo caption
+                - 'pubname'   : remote path and name of published photo
+                - 'pubcollection' : name of publish collection
+                - 'pubtime'   : published datetime in seconds from 2001-1-1
             criterias :
                 - 'name'      : (str) filename without extension
                 - 'exactname' : (str) filename insensitive without extension
@@ -144,8 +152,8 @@ It build SQL SELECT request from 2 strings describing informations to display, a
                 - 'height     : (int) cropped image height. Need to include column "dims"
                 - 'hasgps'    : (bool) has GPS datas
                 - 'gps'       : (str) GPS rectangle defined by :
-                                - town or coordinates, and a square side in kilometer (ex:"paris+20", "45.7578;4.8320+10")
-                                - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
+                                        - town or coordinates, and bound in kilometer (ex:"paris+20", "45.7578;4.8320+10"),
+                                        - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
                 - 'videos'    : (bool) type videos
                 - 'exifindex' : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
                 - 'vcopies'   : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
@@ -165,6 +173,7 @@ It build SQL SELECT request from 2 strings describing informations to display, a
                         'unknown' = write error, phot missing ...
                 - 'idcollection' : (int) collection id
                 - 'collection': (str) collection name
+                - 'pubcollection: (str) publish collection name
                 - 'extfile'   : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
                 - 'sort'      : sql sort string
                 - 'distinct'  : suppress similar lines of results

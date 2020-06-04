@@ -126,23 +126,3 @@ def geocodage(address):
         return None
 
 
-# def geocodage_BANFrance(address, raw=False):
-#     '''
-#     Simple call to geo.api.gouv.fr to retrieve coordinates from address
-#     '''
-#     #atype = 'municipality'
-#     #atype = 'locality'
-#     try:
-# #        resp = requests.get('https://api-adresse.data.gouv.fr/search/?q={}&type={}&limit=1'.format(atype, address))
-#         resp = requests.get('https://api-adresse.data.gouv.fr/search/?q={}&limit=1'.format(address))
-#         json_data = json.loads(resp.text)
-#         if raw:
-#             return json_data
-#         if len(json_data['features']) == 0:
-#             return None
-#         lon, lat = json_data['features'][0]['geometry']['coordinates']
-#         return  (lat, lon),\
-#                 json_data['features'][0]['properties']['city'], \
-#                 json_data['features'][0]['properties']['context']
-#     except requests.RequestException:
-#         return None

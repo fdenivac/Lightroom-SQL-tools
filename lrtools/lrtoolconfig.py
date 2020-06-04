@@ -65,10 +65,11 @@ class LRToolConfig(metaclass=Singleton):
                     'ArchiveDateFmt' : '%%Y/%%m', \
                     'ProductionDateFmt' : '%%Y/%%m', \
                     'DayFirst' : True, \
+                    'GeoCoder' : 'nominatim', \
                 })
 
         # config file is located in directory where main script is lauched
-        config_file = os.path.join(os.path.dirname(sys.argv[0]), CONFIG_FILENAME)      
+        config_file = os.path.join(os.path.dirname(sys.argv[0]), CONFIG_FILENAME)
         dataset = parser.read(config_file)
         try:
             self.default_lrcat = parser.get(CONFIG_MAIN, 'LRCatalog')
@@ -83,6 +84,8 @@ class LRToolConfig(metaclass=Singleton):
             self.fs_encoding = parser.get(CONFIG_MAIN, 'FSEncoding')
 
             self.dayfirst = parser.get(CONFIG_MAIN, 'DayFirst')
+
+            self.geocoder = parser.get(CONFIG_MAIN, 'GeoCoder')
 
 
             if parser.has_section(CONFIG_ARCHVOL):

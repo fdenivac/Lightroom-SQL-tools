@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -6,6 +6,11 @@
 SQL results display functions
 
 """
+
+from datetime import datetime, timedelta
+import pytz
+from . import localzone
+
 
 #
 # specific functions for display datas
@@ -37,6 +42,11 @@ def display_date(value):
     ''' format date : remove sub-seconds '''
     return value[:19]
 
+def display_lrtimestamp(value):
+    ''' format LR timestamp (2001 based) '''
+    utc = pytz.utc.localize(datetime(2001, 1, 1, 0, 0, 0) + timedelta(seconds=float(value)))
+    return utc.astimezone(localzone).strftime("%Y-%m-%d %H:%M:%S")
+
 
 
 #
@@ -52,7 +62,8 @@ DEFAULT_SPECS = {
     'uuid'      : ('%38s', None),
     'rating'    : ('%1s', None),
     'colorlabel': ('%8s', None),
-    'datemod'   : ('%19s', None),
+    'datemod'   : ('%19s', display_lrtimestamp),
+    'datehist'  : ('%19s', display_lrtimestamp),
     'datecapt'  : ('%19s', display_date),
     'modcount'  : ('%2s', None),
     'master'    : ('%10s', None),
@@ -69,6 +80,7 @@ DEFAULT_SPECS = {
     'creator'   : ('%18s', None),
     'caption'   : ('%-30s', None),
     'dims'      : ('%-10s', None),
+    'pubtime'   : ('%19s', display_lrtimestamp),
 }
 DEFAULT_SEPARATOR = ' | '
 

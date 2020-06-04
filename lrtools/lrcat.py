@@ -14,27 +14,28 @@ import logging
 from datetime import datetime
 from dateutil import parser
 
+from . import DATE_REF, localzone
 # config is loaded on import
 from .lrtoolconfig import lrt_config
 
 from .slpp import SLPP
 
-# date reference of lightroom (at least for timestamp of photos modified)
-# (TODO : using select based on touchtime, compararing with count results in LR, needs sometimes to shift of 6h hours ! localization problems ?)
-DATE_REF = datetime(2001, 1, 1, 6, 0, 0)
-
 
 
 def date_to_lrstamp(mydate):
     '''
-    convert string or datetime date to a lightroom timestamp : seconds (float) from 1/1/2001
+    convert localized time string or datetime date to a lightroom timestamp : seconds (float) from 1/1/2001
     '''
     if isinstance(mydate, str):
         dtdate = parser.parse(mydate, dayfirst=lrt_config.dayfirst)
+        # set locale timezone
+        dtdate = dtdate.astimezone(localzone)
     elif isinstance(mydate, datetime):
+        # TODO check tzinfo
         dtdate = mydate
     else:
         return None
+    #
     return (dtdate - DATE_REF).total_seconds()
 
 
@@ -389,23 +390,25 @@ class LRNames(object):
             try:
                 if len(dates) == 2:
                     if dates[0]:
-                        criters += ', fromdatecapt=%s' % dates[0]
+                        criters += ', datecapt=>%s' % dates[0]
                     if dates[1]:
-                        criters += ', todatecapt=%s' % dates[1]
+                        criters += ', datecapt=<%s' % dates[1]
                 else:
-                    criters += ', fromdatecapt=%s' % dates[0]
+                    criters += ', datecapt=>%s' % dates[0]
             except:
                 raise LRCatException('Invalid capture date')
         if datemod:
             dates = datemod.split('-')
             try:
-                if len(dates) == 2:
+                if len(dates) == 1:
+                    criters += ', datemod=>%s' % dates[0]
+                elif len(dates) == 2:
                     if dates[0]:
-                        criters += ', fromdatemod=%s' % dates[0]
+                        criters += ', datemod=>%s' % dates[0]
                     if dates[1]:
-                        criters += ', todatemod=%s' % dates[1]
+                        criters += ', datemod=<%s' % dates[1]
                 else:
-                    criters += ', fromdatemod=%s' % dates[0]
+                    raise LRCatException('Invalid modification date')
             except:
                 raise LRCatException('Invalid modification date')
 
