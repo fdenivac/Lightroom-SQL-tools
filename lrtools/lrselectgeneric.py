@@ -1,5 +1,5 @@
-#!python3
-# # -*- coding: utf-8 -*-
+#!/usr/bin/env python
+# # # -*- coding: utf-8 -*-
 # pylint: disable=line-too-long, bad-continuation
 '''
 
@@ -16,6 +16,7 @@ from dateutil import parser
 from .lrtoolconfig import lrt_config
 
 from .lrcat import date_to_lrstamp
+from .criterlexer import CriterLexer
 
 
 class LRSelectException(Exception):
@@ -104,6 +105,13 @@ class LRSelectGeneric():
         self.froms = None
         self.column_description = columns
         self.criteria_description = criteria
+        self.groupby = ''
+        self.sql_column_names = []
+
+
+    def selected_column_names(self):
+        ''' column names from SQL statement executed '''
+        return self.sql_column_names
 
 
     #
@@ -130,7 +138,7 @@ class LRSelectGeneric():
             sql = 'i.captureTime {0} "{1}"'.format(oper, date.strftime('%Y-%m-%dT%H:%M:%S'))
         return sql
 
-    def func_oper_date_to_lrstamp(self, value):
+    def func_oper_dateloc_to_lrstamp(self, value):
         ''' value is a lightrom timestamp '''
         for index, char in enumerate(value):
             if char.isnumeric():
@@ -138,6 +146,18 @@ class LRSelectGeneric():
                 value = value[index:]
                 break
         dtmod = date_to_lrstamp(value)
+        if not dtmod:
+            raise LRSelectException('invalid date value on "datemod"')
+        return oper, dtmod
+
+    def func_oper_dateutc_to_lrstamp(self, value):
+        ''' value is a lightrom timestamp '''
+        for index, char in enumerate(value):
+            if char.isnumeric():
+                oper = value[:index]
+                value = value[index:]
+                break
+        dtmod = date_to_lrstamp(value, False)
         if not dtmod:
             raise LRSelectException('invalid date value on "datemod"')
         return oper, dtmod
@@ -185,15 +205,14 @@ class LRSelectGeneric():
             value = to_bool(value)
             if value:
                 return ('<>', '""')
-            else:
-                return ('==', '""')
+            return ('==', '""')
         except LRSelectException:
             return ('=', '"%s"' % value)
 
 
 
 
-    def _to_keys(self, strlist):
+    def _keyval_to_keys(self, strlist):
         '''
         convert string of key=value in list of dict
         '''
@@ -205,6 +224,9 @@ class LRSelectGeneric():
                 if not keyval:
                     continue    # skip double commas
                 keyval = keyval.strip()
+                if keyval.startswith('count(') or  keyval.startswith('countby('):
+                    pairs.append({keyval : 'True'})
+                    continue
                 _kv = keyval.split('=', 1)
                 if len(_kv) == 2:
                     _k, _v = _kv
@@ -235,7 +257,7 @@ class LRSelectGeneric():
     def remove_quotes(self, value):
         ''' Remove quotes from string '''
         if not value:
-            return
+            return ''
         if (value[0] == '"' and value[-1] == '"') or (value[0] == "'" and value[-1] == "'"):
             value = value[1:-1]
         return value
@@ -245,8 +267,9 @@ class LRSelectGeneric():
         '''
         Convert string of column names comman separated to sql string
         '''
-        for keyval in self._to_keys(columns):
-            key, value = list(keyval.items())[0]
+        def _column_to_sql(column, case=''):
+            ''' process on column '''
+            key, value = list(column.items())[0]
             try:
                 dvalues = self.column_description[key]
                 if self._VAR_FIELD in dvalues and value.startswith(self._VAR_FIELD):
@@ -254,16 +277,48 @@ class LRSelectGeneric():
                     _, from_sql = dvalues[self._VAR_FIELD]
                     col_sql = self.remove_quotes(value[len(self._VAR_FIELD):])
                 else:
-                    if value not in list(dvalues.keys()):
-                        value = bool(value)
-                        if value not in list(dvalues.keys()):
-                            raise LRSelectException('Invalid value "%s" on column "%s"' % (value, key))
+                    if value not in dvalues.keys():
+                        raise LRSelectException('Invalid value "%s" on column "%s"' % (value, key))
                     col_sql, from_sql = dvalues[value]
-                sqlcols.append(col_sql)
+                if case in ['count', 'countby']:
+                    parts = col_sql.split(' ')
+                    if len(parts) == 1:
+                        sqlcols.append('count(%s)' % col_sql)
+                    elif len(parts) == 3 and parts[1].upper() == 'AS':
+                        sqlcols.append('count(%s) AS count_%s' % (parts[0], parts[2]))
+                        if case == 'countby':
+                            self.groupby = f'GROUP BY {parts[0]}'
+                    else:
+                        raise LRSelectException('Error in count definition')
+                else:
+                    sqlcols.append(col_sql)
                 if from_sql:
                     self._add_from(from_sql, sqlfroms)
             except KeyError:
                 raise LRSelectException('invalid column key "%s"' % key)
+
+        # ENTRY columns_to_sql(self, ...)
+        for keyval in self._keyval_to_keys(columns):
+            key, value = list(keyval.items())[0]
+            match = re.match(r'count\(([\w=]+)\)', key)
+            if match:
+                _column_to_sql({match.group(1):value}, 'count')
+                continue
+            match = re.match(r'countby\(([\w=]+)\)', key)
+            if match:
+                lkv = self._keyval_to_keys(match.group(1))
+                _column_to_sql(lkv[0], 'countby')
+                continue
+            _column_to_sql(keyval)
+
+
+
+    def select_predefined(self, _columns, _criters):
+        '''
+        To be redefined in derived class
+        Must return SQL statement if columns or criters is a keyword (a function) supported, else empty string
+        '''
+        return None
 
 
     def select_generic(self, columns, criters, **kwargs):
@@ -282,6 +337,18 @@ class LRSelectGeneric():
             - sql : return SQL string only
         '''
 
+        def _finalize(sql):
+            log.info('SQL = %s', sql)
+            if kwargs.get('debug') or kwargs.get('print'):
+                print('SQL =', sql)
+            if kwargs.get('print'):
+                return None
+            if kwargs.get('sql'):
+                return sql
+            self.lrdb.cursor.execute(sql)
+            # retrieve columns names as detected by sqlite
+            self.sql_column_names = [d[0] for d in self.lrdb.cursor.description]
+            return self.lrdb.cursor
 
         # logging
         log = logging.getLogger()
@@ -295,10 +362,36 @@ class LRSelectGeneric():
         select_type = None
 
         #
+        # process predefined sql functions
+        #
+        # pylint: disable=assignment-from-none
+        sql = self.select_predefined(columns, criters)
+        if sql:
+            return _finalize(sql)
+
+        #
         # process criteria :
         #
-        for keyval in self._to_keys(criters):
-            key, value = list(keyval.items())[0]
+
+        lex = CriterLexer(criters)
+        if criters and not lex.parse():
+            raise LRSelectException('Criteria syntax error : %s' %  lex.last_error)
+        token2sql = {'LPAR': '(', 'RPAR': ')', 'AND': 'AND', 'OR': 'OR'}
+
+        # process tokens
+        prev_optoken = None
+        has_where = False
+        for token, data in lex.tokens:
+            if token in token2sql.keys():
+                # add previous token if any
+                if prev_optoken:
+                    wheres.append(token2sql[prev_optoken])
+                prev_optoken = token
+                continue
+
+            if token != 'KEYVAL':
+                LRSelectException('Invalid Token : "%s"' % token)
+            key, value = data
             value = self.remove_quotes(value)
             if not key in nb_wheres:
                 nb_wheres[key] = 1
@@ -311,7 +404,10 @@ class LRSelectGeneric():
                 _from, _where = criter_desc
             else:
                 _from, _where, func = criter_desc
-                value = func(value)
+                try:
+                    value = func(value)
+                except TypeError:
+                    raise LRSelectException('Syntax error on criterion "%s"' % key)
             # some specific keywords for SQL
             if key == 'sort':       # specific key 'sort' for sql 'ORDER BY'
                 way = 'DESC'
@@ -319,9 +415,11 @@ class LRSelectGeneric():
                     way = 'ASC'
                     value = value[1:]
                 sort = 'ORDER BY %s %s' % (value, way)
+                prev_optoken = None
                 continue
             if key == 'distinct':      # specific key 'sort' for sql 'SELECT DISTINCT'
                 select_type = _where
+                prev_optoken = None
                 continue
 
             if _from:
@@ -332,7 +430,19 @@ class LRSelectGeneric():
             _where = _where.replace('<NUM>', '%s' % nb_wheres[key])
             if '%s' in _where:
                 _where = _where % value
+            
+            # append the operation token if any
+            if prev_optoken:
+                if prev_optoken == 'LPAR' or has_where:
+                    wheres.append(token2sql[prev_optoken])
+                prev_optoken = None
+            # and the "where" string
             wheres.append(_where)
+            has_where = True
+
+        # finally: last operation token (a parenthesis)
+        if prev_optoken:
+            wheres.append(token2sql[prev_optoken])
 
         #
         # process columns :
@@ -348,7 +458,7 @@ class LRSelectGeneric():
             fields = 'rf.absolutePath || fo.pathFromRoot || fi.baseName || "." || fi.extension '
         self.froms = ' '.join(self.froms)
         if wheres:
-            wheres = 'WHERE %s' % ' AND '.join(wheres)
+            wheres = 'WHERE %s' % ' '.join(wheres)
         else:
             wheres = ''
 
@@ -357,13 +467,5 @@ class LRSelectGeneric():
         elif not select_type:
             select_type = 'SELECT'
 
-        sql = '%s  %s %s %s %s' % (select_type, fields, self.froms, wheres, sort)
-        log.info('SQL = %s', sql)
-        if kwargs.get('debug') or kwargs.get('print'):
-            print('SQL =', sql)
-        if kwargs.get('print'):
-            return None
-        if kwargs.get('sql'):
-            return sql
-        self.lrdb.cursor.execute(sql)
-        return self.lrdb.cursor
+        sql = '%s  %s %s %s %s %s' % (select_type, fields, self.froms, wheres, self.groupby, sort)
+        return _finalize(sql)

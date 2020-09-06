@@ -7,6 +7,7 @@ SQL results display functions
 
 """
 
+import re
 from datetime import datetime, timedelta
 import pytz
 from . import localzone
@@ -77,10 +78,14 @@ DEFAULT_SPECS = {
     'focal'     : ('%6s', None),
     'aperture'  : ('%5s', display_aperture),
     'speed'     : ('%6s', display_speed),
-    'creator'   : ('%18s', None),
+    'creator'   : ('%-18s', None),
     'caption'   : ('%-30s', None),
     'dims'      : ('%-10s', None),
+    'pubcollection'   : ('%30s', None),
+    'pubname'   : ('%30s', None),
     'pubtime'   : ('%19s', display_lrtimestamp),
+    'latitude'  : ('%-18s', None),
+    'longitude' : ('%-18s', None),
 }
 DEFAULT_SEPARATOR = ' | '
 
@@ -88,12 +93,11 @@ DEFAULT_SEPARATOR = ' | '
 def prepare_display_columns(columns, widths):
     '''
     Prepare columns to display : set width and specific display functions
-    - columns : (str) columns names as defined by LRSelectPhotos
-    - widths : (str) width of each column, comma separated (ex: "15,-50")
+    - columns : ([str]) columns names as defined by LRSelectPhotos
+    - widths : ([str]) width of each column, comma separated (ex: "15,-50")
     '''
-    widths = widths.split(',') if widths else []
     column_spec = {}
-    for num_col, name in enumerate(columns.split(',')):
+    for num_col, name in enumerate(columns):
         name = name.strip()
         if not name:
             continue
@@ -121,10 +125,18 @@ def display_results(rows, columns, **kwargs):
        * separator : characters separator between columns
        * raw_print : print raw value (for columns aperture, shutter speed, ido, dates)
     '''
-    if not rows and kwargs.get('header', True):
-        print(' * None data result')
+    if not rows:
+        if kwargs.get('header', True):
+            print(' * None data result')
         return
 
+    if isinstance(columns, str):
+        columns = [a.strip() for a in columns.split(',')]
+    widths = kwargs.get('widths', [])
+    if widths is None:
+        widths = []
+    if isinstance(widths, str):
+        widths = [a.strip() for a in widths.split(',')]
     indent = kwargs.get('indent', 4)
     separator = kwargs.get('separator', DEFAULT_SEPARATOR)
     wanted_lines = kwargs.get('max_lines', 0)
@@ -137,7 +149,12 @@ def display_results(rows, columns, **kwargs):
         if  kwargs.get('header', True):
             print(' * Photo results (first %s photos on %s) :' % (wanted_lines, len(rows)))
 
-    column_spec = prepare_display_columns(columns, kwargs.get('widths', ''))
+    column_spec = prepare_display_columns(columns, widths)
+    # basic check : detect if suffisant column
+    for i in range(len(rows[0])):
+        if i < len(column_spec):
+            continue
+        column_spec[i] = (f'column{i}', DEFAULT_SPEC[0], DEFAULT_SPEC[1])
 
     # display header
     if kwargs.get('header', True):
@@ -146,7 +163,11 @@ def display_results(rows, columns, **kwargs):
 
         for num_col in range(0, len(column_spec)):
             name, width, _ = column_spec[num_col]
-            val_width = int(''.join([char for char in width if char.isdigit()]))
+            match = re.search(r'(\d+)s', width)
+            if match:
+                val_width = int(match.group(1))
+            else:
+                val_width = 8
             total_width += val_width
             name = name[:val_width]
             line.append(width % name)

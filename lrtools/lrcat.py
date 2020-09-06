@@ -1,10 +1,8 @@
-#!python3
-# # -*- coding: utf-8 -*-
-# pylint: disable=too-many-lines,line-too-long
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# pylint: disable=line-too-long, C0326, unused-variable, invalid-name, too-many-lines
 '''
-Classes for Lightroom database manipulations
-    - LRCatDB
-    - LRNames
+Main class LRCatDB for Lightroom database manipulations
 
 '''
 import os
@@ -14,7 +12,7 @@ import logging
 from datetime import datetime
 from dateutil import parser
 
-from . import DATE_REF, localzone
+from . import DATE_REF, localzone, utczone
 # config is loaded on import
 from .lrtoolconfig import lrt_config
 
@@ -22,14 +20,17 @@ from .slpp import SLPP
 
 
 
-def date_to_lrstamp(mydate):
+def date_to_lrstamp(mydate, localtz=True):
     '''
     convert localized time string or datetime date to a lightroom timestamp : seconds (float) from 1/1/2001
     '''
     if isinstance(mydate, str):
         dtdate = parser.parse(mydate, dayfirst=lrt_config.dayfirst)
         # set locale timezone
-        dtdate = dtdate.astimezone(localzone)
+        if localtz:
+            dtdate = dtdate.astimezone(localzone)
+        else:
+            dtdate = dtdate.astimezone(utczone)
     elif isinstance(mydate, datetime):
         # TODO check tzinfo
         dtdate = mydate
@@ -44,13 +45,13 @@ def lr_strptime(lrdate):
     '''
     Convert LR date string to datetime
     '''
-    if '.' in lrdate and '+' in lrdate:
-        # format 2019-08-13T19:47:33.022+02:00
-        return datetime.strptime(lrdate, '%Y-%m-%dT%H:%M:%S.%f%z')
     if  '.' in lrdate:
+        if '+' in lrdate:
+            # format 2019-08-13T19:47:33.022+02:00
+            return datetime.strptime(lrdate, '%Y-%m-%dT%H:%M:%S.%f%z')
         # format 2019-08-13T19:47:33.269
         return datetime.strptime(lrdate, '%Y-%m-%dT%H:%M:%S.%f')
-    if '+' in lrdate:
+    if '+' in lrdate or 'Z' in lrdate:
         # format 2019-08-13T19:47:33+02:00
         try:
             return datetime.strptime(lrdate, '%Y-%m-%dT%H:%M:%S%z')
@@ -66,6 +67,7 @@ def lr_strptime(lrdate):
 
 
 # import here for avoid import circular error :
+# pylint: disable=wrong-import-position
 from .lrselectphoto import LRSelectPhoto
 
 
@@ -90,20 +92,30 @@ class LRCatDB():
 
 
     def __init__(self, lrcat_file):
+        self.conn = self.cursor = self.lrdb_version = None
+        def open_db(uri):
+            try:
+                self.conn = sqlite3.connect(uri, uri='?' in  uri)
+                self.cursor = self.conn.cursor()
+                self.lrdb_version, = self.cursor.execute('SELECT value FROM Adobe_variablesTable WHERE name="Adobe_DBVersion"').fetchone()
+                log.info('LR database "%s" opened with uri "%s"', self.lrcat_file, uri)
+                log.info('Adobe_DBVersion : %s', self.lrdb_version)
+                return True
+            except sqlite3.OperationalError:
+                self.conn.close()
+                return False
         self.lrcat_file = lrcat_file
         if not os.path.exists(self.lrcat_file):
             raise LRCatException('LR catalog doesn\'t exist')
         log = logging.getLogger()
         log.info('sqlite3 binding version : %s , sqlite3 version : %s', sqlite3.version, sqlite3.sqlite_version)
-        # try to open DB in readonly in python 3
-        try:
-            lrcat_file = 'file:%s?mode=ro&cache=private&nolock=1' % self.lrcat_file
-            self.conn = sqlite3.connect(lrcat_file, uri=True)
-            log.info('Database "%s" opened in readonly,cacheprivate,nolock', self.lrcat_file)
-        except sqlite3.OperationalError:
-            self.conn = sqlite3.connect(self.lrcat_file)
-            log.info('Database "%s" opened', self.lrcat_file)
-        self.cursor = self.conn.cursor()
+        if not open_db('file:%s?mode=ro&cache=private&nolock=1' % self.lrcat_file):
+            # unfortunaly Lightroom classic catalogs (at least version 8) fails to be opened with nolock...
+            # So try withoput nolock
+            if not open_db('file:%s?mode=ro&cache=private' % self.lrcat_file):
+                # But can fails too if Lightroom is running : Ligthroom open catalog in exclusive mode. No solution found !
+                log.info('Failed to open "%s" with uri "mode=ro&cache=private"', self.lrcat_file)
+                raise LRCatException('Unable to open LR catalog')
         self.lrphoto = LRSelectPhoto(self)
 
 
@@ -132,14 +144,13 @@ class LRCatDB():
         return self.cursor
 
 
-    def select_duplicates(self):
+    def select_duplicates(self, **kwargs):
         '''
-        Returns duplicates photos (with same basename) :
+        Returns duplicates photos name (same basename) :
             ( (fullname, number_copies), ...)
         '''
-        self.cursor.execute('\
-        SELECT * FROM ( \
-            SELECT rf.absolutePath || fo.pathFromRoot || fi.baseName || "." || fi.extension as FullName, count( fi.baseName) AS Nombre \
+        sql = 'SELECT * FROM ( \
+            SELECT rf.absolutePath || fo.pathFromRoot || fi.baseName || "." || fi.extension as name, count( fi.baseName) AS duplicates \
             FROM Adobe_images i \
             JOIN AgLibraryFile fi on i.rootFile = fi.id_local \
             JOIN AgLibraryFolder fo on fi.folder = fo.id_local \
@@ -147,8 +158,11 @@ class LRCatDB():
             WHERE i.MasterImage IS NULL \
             AND i.fileFormat != "VIDEO" \
             GROUP BY UPPER(fi.baseName)) \
-            WHERE Nombre >1 ')
-        return self.cursor
+            WHERE duplicates >1'
+        if kwargs.get('sql'):
+            return sql
+        self.cursor.execute(sql)
+        return self.cursor.fetchall()
 
 
     def select_imports(self, import_id=None):
@@ -201,27 +215,32 @@ class LRCatDB():
             return None
 
 
-    def select_count_by_date(self, mode, date_start, date_end=None):
+    def select_count_by_date(self, mode, date_start, date_end=None, **kwargs):
         '''
         Returns photos number by year or month
-        with :
-            - mode : "dates_by_month" or "dates_by_year"
-            - date_start :
-            - date_end :
+
+        - mode : "by_year", "by_month" or "by_day"
+        - date_start
+        - date_end
         '''
         # valid too : SELECT COUNT(captureTime),  DATE(captureTime, 'start of month') FROM Adobe_images  GROUP BY DATE(captureTime, 'start of month')
-        if mode == 'dates_by_day':
-            self.cursor.execute('SELECT strftime("%%Y-%%m-%%d", DATE(captureTime, "start of day")) as d, COUNT(captureTime)\
-                FROM Adobe_images WHERE d >= "%s" AND d < "%s" GROUP BY DATE(captureTime, "start of day")' % (date_start, date_end))
-        elif mode == 'dates_by_month':
-            self.cursor.execute('SELECT strftime("%%Y-%%m", DATE(captureTime, "start of month")) as d, COUNT(captureTime)\
-                FROM Adobe_images WHERE d >= "%s" AND d < "%s" GROUP BY DATE(captureTime, "start of month")' % (date_start, date_end))
-        elif mode == 'dates_by_year':
-            self.cursor.execute('SELECT strftime("%%Y", DATE(captureTime, "start of year")) as d, COUNT(captureTime)\
-                FROM Adobe_images WHERE d >= "%s" AND d < "%s" GROUP BY DATE(captureTime, "start of year")' % (date_start, date_end))
+        if not date_end:
+            date_end = datetime.now()
+        if mode == 'by_day':
+            sql = 'SELECT strftime("%%Y-%%m-%%d", DATE(captureTime, "start of day")) as day, COUNT(captureTime) AS count' \
+                ' FROM Adobe_images WHERE captureTime >= "%s" AND captureTime < "%s" GROUP BY DATE(captureTime, "start of day")' % (date_start, date_end)
+        elif mode == 'by_month':
+            sql = 'SELECT strftime("%%Y-%%m", DATE(captureTime, "start of month")) as month, COUNT(captureTime) AS count'\
+                ' FROM Adobe_images WHERE captureTime >= "%s" AND captureTime < "%s" GROUP BY DATE(captureTime, "start of month")' % (date_start, date_end)
+        elif mode == 'by_year':
+            sql = 'SELECT strftime("%%Y", DATE(captureTime, "start of year")) as year, COUNT(captureTime) AS count'\
+                ' FROM Adobe_images WHERE captureTime >= "%s" AND captureTime <= "%s" GROUP BY DATE(captureTime, "start of year")' % (date_start, date_end)
         else:
             print('BUG')
             sys.exit(0)
+        if kwargs.get('sql'):
+            return sql
+        self.cursor.execute(sql)
         return self.cursor.fetchall()
 
 
@@ -338,147 +357,3 @@ class LRCatDB():
         if end == -1:
             return None
         return xmp[beg:end]
-
-
-
-
-
-
-class LRNames(object):
-    '''
-    LRNames is the Lightroom photo names of  catalog
-
-    lrphotos is a dictionnary with Adobe_images.id_local as key
-        It contains a list = (lrname, uuid, stackpos, master, vname, datemod, idlocal, groupvcopies, prodname, prodpath)
-        In addition,  when production path if wanted, field xmp is added (needed for build path from capture date)
-        'groupcopies' contains the id of master photo when virtual copy. None if not virtual
-
-    Usage :
-
-    '''
-
-    def __init__(self, lrcat, **kwargs):
-        ''' init with a LRCat instance and populates '''
-        self.lrdb = lrcat
-        self.lrphotos = dict()
-        self._populate(**kwargs)
-
-
-    def _populate(self, **kwargs):
-        '''
-        Build all base names conform to Lightroom export
-        Names are in key in self.lrphotos. Contains :
-            (lrname, uuid, stackpos, master, vname, datemod, idlocal, _master, prodname, prodpath)
-
-        kwargs :
-            - date :    criter capture date(s)
-            - datemod : criter modification date(s)
-            - dir :     production directory
-            - fmtdate : date format for build subdirectories in production dir
-
-        '''
-        log = logging.getLogger()
-        datecapt = kwargs.pop('date', None)
-        datemod = kwargs.pop('datemod', None)
-        prod_basepath = kwargs.pop('dir', None)
-        date_fmt = kwargs.pop('fmtdate', None)
-        use_datehist = kwargs.pop('use_datehist', False)
-
-        criters = 'sort=name, videos=False'
-        if datecapt:
-            dates = datecapt.split('-')
-            try:
-                if len(dates) == 2:
-                    if dates[0]:
-                        criters += ', datecapt=>%s' % dates[0]
-                    if dates[1]:
-                        criters += ', datecapt=<%s' % dates[1]
-                else:
-                    criters += ', datecapt=>%s' % dates[0]
-            except:
-                raise LRCatException('Invalid capture date')
-        if datemod:
-            dates = datemod.split('-')
-            try:
-                if len(dates) == 1:
-                    criters += ', datemod=>%s' % dates[0]
-                elif len(dates) == 2:
-                    if dates[0]:
-                        criters += ', datemod=>%s' % dates[0]
-                    if dates[1]:
-                        criters += ', datemod=<%s' % dates[1]
-                else:
-                    raise LRCatException('Invalid modification date')
-            except:
-                raise LRCatException('Invalid modification date')
-
-        # load all photos infos
-        masters_vcopies = dict()    # for memorize the master photos having virtual copies
-        if use_datehist:
-            columns = 'id, name=basext, uuid, vname, stackpos, master, datehist'
-        else:
-            columns = 'id, name=basext, uuid, vname, stackpos, master, datemod'
-        if prod_basepath:
-            columns += ', xmp'
-        log.info('LRNames criters %s', criters)
-        for row in self.lrdb.lrphoto.select_generic(columns, criters).fetchall():
-            if prod_basepath:
-                idlocal, lrname, uuid, vname, stackpos, master, datemod, xmp = row
-            else:
-                idlocal, lrname, uuid, vname, stackpos, master, datemod = row
-            groupvcopies = None
-            prodname = os.path.splitext(lrname)[0].lower()
-            # convert virtual copy name to export name (suffix : '-<NUMCOPY> starting to 2)
-            if master:
-                log.info('### Load virtual copies: %s %s', master, lrname)
-                rows = self.lrdb.select_vcopies_master(master, 'id, name=basext, vname, stackpos, uuid, master').fetchall()
-                numcopy = 0
-                for _id, _lrname, _vname, _stack_pos, _uuid, _master in rows:
-                    if not _master: # identify the master photo
-                        # this master is in a group of virtual copies
-                        masters_vcopies[_id] = master
-                        log.info('Marked as copy group : %s = %s', lrname, prodname)
-                    numcopy += 1
-                    if idlocal == _id:
-                        break
-                prodname = '%s-%s' % (prodname, numcopy)
-                groupvcopies = master
-            if prod_basepath:
-                prodpath, _ = self.lrdb.prodpath_from_xmp(xmp, prod_basepath, date_fmt)
-            else:
-                prodpath = None
-            # and append
-            self.lrphotos[idlocal] = (lrname, uuid, stackpos, master, vname, datemod, idlocal, groupvcopies, prodname, prodpath)
-
-        # in second phase : update masters having virtual copies
-        for _id, _master in masters_vcopies.items():
-            try:
-                lrname, uuid, stackpos, master, vname, datemod, idlocal, groupvcopies, prodname, prodpath = self.lrphotos[_id]
-                log.info('Set groupvcopies to %s %s %s %s %s %s %s %s', lrname, uuid, stackpos, master, vname, idlocal, groupvcopies, prodname)
-            except KeyError:
-                # when using criter datemod, all photos are not present in self.lrphotos
-                row = self.lrdb.lrphoto.select_generic('id, name=basext, uuid, vname, stackpos, master, datemod, xmp', 'id=%s' % _id).fetchone()
-                idlocal, lrname, uuid, vname, stackpos, master, datemod, xmp = row
-                prodname = os.path.splitext(lrname)[0].lower()
-                if prod_basepath:
-                    prodpath, _ = self.lrdb.prodpath_from_xmp(xmp, prod_basepath, date_fmt)
-                else:
-                    prodpath = None
-                log.info('Add missing master %s %s %s %s %s %s %s %s %s %s', lrname, uuid, stackpos, master, vname, datemod, idlocal, _master, prodname, prodpath)
-            self.lrphotos[_id] = (lrname, uuid, stackpos, master, vname, datemod, idlocal, _master, prodname, prodpath)
-
-
-    def get_prodnames(self, want_vcopies, want_stack1):
-        '''
-        Returns final production names considering options virtual copies and photos stacked
-            It is a dictionnary with full production name as key
-            Contains (lrname, uuid, stackpos, master, vname, datemod, idlocal, groupvcopies, prodname, prodpath)
-        '''
-        prodnames = dict()
-        for lrname, uuid, stackpos, master, vname, datemod, idlocal, groupvcopies, prodname, prodpath in list(self.lrphotos.values()):
-            if groupvcopies and not want_vcopies:
-                continue
-            if  stackpos and stackpos > 1 and want_stack1 and not groupvcopies:
-                continue
-            prodnames[prodname] = (lrname, uuid, stackpos, master, vname, datemod, idlocal, groupvcopies, prodname, prodpath)
-        return prodnames

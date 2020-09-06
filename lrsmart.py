@@ -7,6 +7,7 @@ Execute Lightroom smart collections from catalog or file
 
 """
 
+import sys
 import logging
 import argparse
 from sqlite3 import OperationalError
@@ -14,7 +15,7 @@ from sqlite3 import OperationalError
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config
 
-from lrtools.lrcat import LRCatDB
+from lrtools.lrcat import LRCatDB, LRCatException
 from lrtools.lrselectgeneric import LRSelectException
 from lrtools.lrsmartcoll import SQLSmartColl, SmartException
 from lrtools.slpp import SLPP
@@ -197,8 +198,12 @@ def main():
             print()
 
         if args.results:
-            display_results(rows, args.columns, \
-                max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print, separator=args.separator)
+            display_results(rows, \
+                    [d[0] for d in lrdb.cursor.description], \
+                    max_lines=args.max_lines, \
+                    header=not args.no_header, \
+                    raw_print=args.raw_print, \
+                    separator=args.separator)
 
     log.info('lrsmart end')
 
@@ -211,3 +216,5 @@ if __name__ == '__main__':
     except IOError as _e:
         if _e.errno not in [22, 32]:
             raise _e
+    except (LRSelectException, LRCatException) as _e:
+        print(' ==> FAILED:', _e, file=sys.stderr)

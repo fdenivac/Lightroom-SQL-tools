@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python
 # # -*- coding: utf-8 -*-
 # pylint: disable=bad-continuation,line-too-long, C0326
 
@@ -30,17 +30,17 @@ class LRSelectCollection(LRSelectGeneric):
             #
             { \
                 'all' :  {
-                    True :  '*' },
+                    'True' : [ '*',  None ] }, \
                 'name' : { \
-                    True : [ 'col.name AS name',  None ] }, \
+                    'True' : [ 'col.name AS name',  None ] }, \
                 'id' : { \
-                    True : [ 'col.id_local AS id',  None ] }, \
+                    'True' : [ 'col.id_local AS id',  None ] }, \
                 'type' : { \
-                    True : [ 'col.creationId AS type',  None ] }, \
+                    'True' : [ 'col.creationId AS type',  None ] }, \
                 'parent' : { \
-                    True : [ 'col.parent AS parent',  None ] }, \
+                    'True' : [ 'col.parent AS parent',  None ] }, \
                 'smart' : { \
-                    True : ['cont.content AS content', [ 'JOIN AgLibraryCollectionContent cont ON col.id_local = cont.collection' ] ] }, \
+                    'True' : ['cont.content AS content', [ 'JOIN AgLibraryCollectionContent cont ON col.id_local = cont.collection' ] ] }, \
             },
 
             #
@@ -67,14 +67,6 @@ class LRSelectCollection(LRSelectGeneric):
                     'JOIN AgLibraryCollectionContent cont ON col.id_local = cont.collection', \
                     'col.name LIKE "%s" AND cont.owningModule = "ag.library.smart_collection"',
                     ],
-                #  same as id4content but need to specify a criteria "id=NUM"
-                #       or name4content and  specify a criteria "name=NUM"
-                #
-                #  'content' : [ \
-                #     'JOIN AgLibraryCollectionContent cont ON col.id_local = cont.collection', \
-                #     'cont.owningModule = "ag.library.smart_collection"', \
-                #    ],
-
               }
         )
 

@@ -7,6 +7,7 @@ Select photos from Lightroom catalog
 
 """
 
+import sys
 import logging
 import argparse
 from argparse import RawTextHelpFormatter
@@ -15,7 +16,7 @@ import sqlite3
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config
 
-from lrtools.lrcat import LRCatDB
+from lrtools.lrcat import LRCatDB, LRCatException
 from lrtools.lrselectgeneric import LRSelectException
 from lrtools.lrselectphoto import LRSelectPhoto
 from lrtools.lrselectcollection import LRSelectCollection
@@ -24,6 +25,7 @@ from lrtools.display import display_results
 
 DEFAULT_COLUMNS = 'name,datecapt'
 
+# pylint: disable=invalid-name
 log = logging.getLogger()
 
 
@@ -66,9 +68,10 @@ def main():
     parser.add_argument('-n', '--max_lines', type=int, default=0, help='Max number of results to display')
     parser.add_argument('-f', '--file', help='UUIDs photos file : replace the criteria parameter which is ignored. All parameters are ignored')
     parser.add_argument('-t', '--table', choices=['photo', 'collection'], default='photo', help='table to work on : photo or collection')
-    parser.add_argument('-N', '--no_header', action='store_true', help='don\'t print header (photos count ans columns names)')
+    parser.add_argument('-N', '--no-header', action='store_true', help='don\'t print header (photos count ans columns names)')
     parser.add_argument('-w', '--widths', help='Widths of columns to display widths (ex:30,-50,10)')
     parser.add_argument('-S', '--separator', default=' | ', help='separator string between columns (default:"%(default)s")')
+    parser.add_argument('-I', '--indent', type=int, default=4, help='space indentation in output (default:"%(default)s")')
     parser.add_argument('--raw_print', action='store_true', help='print raw value (for speed, aperture columns)')
     parser.add_argument('--log', help='log on file')
 
@@ -90,40 +93,45 @@ def main():
         handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
         log.addHandler(handler)
     log.info('lrselect start')
+    log.info('arguments: %s', ' '.join(sys.argv[1:]))
 
     # open database
     lrdb = LRCatDB(args.lrcat)
 
     # select on which table to work
     if args.table == 'photo':
-        select_generic = lrdb.lrphoto.select_generic
+        lrobj = lrdb.lrphoto
     elif args.table == 'collection':
-        lrcollection = LRSelectCollection(lrdb)
-        select_generic = lrcollection.select_generic
+        lrobj = LRSelectCollection(lrdb)
 
     if args.file:
         # option file : all parameters other than "columns" are ignored
         try:
             uuids = open(args.file).read().splitlines()
         except OSError:
-            print(' ==> Failed to open file')
+            print(' ==> Failed to open file', file=sys.stderr)
             return
         # build rows ...
         num_uuid = 1
         rows = []
         for uuid in uuids:
             try:
-                rows.append(select_generic(args.columns, 'uuid="%s"' % uuid).fetchone())
+                rows.append(lrobj.select_generic(args.columns, 'uuid="%s"' % uuid).fetchone())
             except LRSelectException as _e:
-                print(' ==> FAILED:', _e)
+                print(' ==> FAILED:', _e, file=sys.stderr)
                 return
             except sqlite3.OperationalError as _e:
-                print(' ==> FAILED SQL :', _e)
+                print(' ==> FAILED SQL :', _e, file=sys.stderr)
                 return
             num_uuid += 1
         # ... and displays
-        display_results(rows, args.columns, \
-            max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print, widths=args.widths, separator=args.separator)
+        display_results(rows, \
+            lrobj.selected_column_names(), \
+            max_lines=args.max_lines, \
+            header=not args.no_header, \
+            widths=args.widths,\
+            raw_print=args.raw_print, \
+            separator=args.separator)
         return
 
 
@@ -132,32 +140,33 @@ def main():
         args.count = True
 
     if args.sql:
-        try:
-            log.info('call select_generic for print SQL :')
-            print(' * SQL request = ', select_generic(args.columns, args.criteria, sql=True))
-        except LRSelectException as _e:
-            print(' ==> FAILED:', _e)
-            return
+        print(' * SQL request = ', lrobj.select_generic(args.columns, args.criteria, sql=True))
 
 
     if not (args.count or args.results):
         return
 
     try:
-        rows = select_generic(args.columns, args.criteria).fetchall()
-    except (LRSelectException, sqlite3.OperationalError)  as _e:
+        rows = lrobj.select_generic(args.columns, args.criteria).fetchall()
+    except (LRSelectException)  as _e:
         # TODO: convert specific error caused by a limitation on build SQL with criteria width or height
         if _e.args[0] == 'no such column: dims':
             _e.args = ('Try to add column "dims"',)
-        print(' ==> FAILED:', _e)
+        print(' ==> FAILED:', _e, file=sys.stderr)
         return
 
     if args.count:
         print(' * Count results:', len(rows))
 
     if args.results:
-        display_results(rows, args.columns, \
-            max_lines=args.max_lines, header=not args.no_header, raw_print=args.raw_print, widths=args.widths, separator=args.separator)
+        display_results(rows, \
+            lrobj.selected_column_names(), \
+            max_lines=args.max_lines, \
+            header=not args.no_header, \
+            widths=args.widths,\
+            raw_print=args.raw_print, \
+            separator=args.separator, \
+            indent=args.indent)
 
 
 
@@ -169,4 +178,9 @@ if __name__ == '__main__':
     except IOError as _e:
         if _e.errno not in [22, 32]:
             raise _e
+    except (LRSelectException, LRCatException) as _e:
+        print(' ==> FAILED:', _e, file=sys.stderr)
+    except sqlite3.OperationalError as _e:
+        print(' ==> FAILED SQL :', _e, file=sys.stderr)
+
     log.info('lrselect end')
