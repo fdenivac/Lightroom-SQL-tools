@@ -146,7 +146,7 @@ class LRSelectGeneric():
                 value = value[index:]
                 break
         dtmod = date_to_lrstamp(value)
-        if not dtmod:
+        if dtmod is None:
             raise LRSelectException('invalid date value on "datemod"')
         return oper, dtmod
 
@@ -430,7 +430,7 @@ class LRSelectGeneric():
             _where = _where.replace('<NUM>', '%s' % nb_wheres[key])
             if '%s' in _where:
                 _where = _where % value
-            
+
             # append the operation token if any
             if prev_optoken:
                 if prev_optoken == 'LPAR' or has_where:

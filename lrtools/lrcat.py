@@ -36,8 +36,8 @@ def date_to_lrstamp(mydate, localtz=True):
         dtdate = mydate
     else:
         return None
-    #
-    return (dtdate - DATE_REF).total_seconds()
+    ts = (dtdate - DATE_REF).total_seconds()
+    return ts if ts >= 0 else 0
 
 
 
