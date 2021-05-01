@@ -199,6 +199,10 @@ class LRSelectPhoto(LRSelectGeneric):
                     '', \
                     'i.touchtime %s %s', self.func_oper_dateloc_to_lrstamp, \
                     ],
+                'modcount' : [ \
+                    '', \
+                    'i.touchcount %s', \
+                    ],
                 'videos' : [ \
                     '', \
                     'i.fileFormat %s "VIDEO"', self.func_bool_to_equal, \
@@ -591,6 +595,7 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'caption'    : (true/false/str) photo caption
             - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
             - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
+            - 'modcount'   : (int) number of modifications
             - 'iso'        : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
             - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
             - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
