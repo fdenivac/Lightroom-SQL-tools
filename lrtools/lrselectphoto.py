@@ -219,6 +219,10 @@ class LRSelectPhoto(LRSelectGeneric):
                     '', \
                     'i.colorlabels %s %s', self.func_value_or_not_equal,
                     ],
+                'flag' : [ \
+                    '', \
+                    '%s', self.func_flag, \
+                    ],
                 'title' : [ \
                     'LEFT JOIN AgMetadataSearchIndex msi ON i.id_local = msi.image', \
                     '%s', self.func_titleindex \
@@ -516,6 +520,17 @@ class LRSelectPhoto(LRSelectGeneric):
             return 'i.rating IS NULL'
         return 'i.rating %s' % value
 
+    def func_flag(self, value):
+        '''
+        select flag : flagged (1), unflagged (0), rejected (-1)
+        '''
+        if value in ['1', 'flagged']:
+            return 'i.pick == 1'
+        if value in ['0', 'unflagged']:
+            return 'i.pick == 0'
+        if value in ['-1', 'rejected']:
+            return 'i.pick == -1'
+        raise LRSelectException('Incorrect pick value')
 
     def select_predefined(self, columns, _criters):
         '''
@@ -589,8 +604,9 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'ext'        : (str) file extension
             - 'id'         : (int) photo id (Adobe_images.id_local)
             - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
-            - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note. ex: "rating==5"
+            - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note (ex: "rating==5")
             - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
+            - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
             - 'creator'    : (str) photo creator
             - 'caption'    : (true/false/str) photo caption
             - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
