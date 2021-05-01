@@ -1,16 +1,15 @@
 # Lightroom-SQL-tools
-Python scripts to retrieve and displays photos informations from lightroom catalog
+Python library and scripts to retrieve and displays photos informations from lightroom catalog
 
 * Execute SQL requests outside of Lightroom
-* Catalog opened in read only, so ...
-* ...scripts can be executed when Lightroom is running.
-* 2 scripts : **lrselect** for generic selection based on various criteria, and **lrsmart** for executing smart collections
+* Catalog opened in read only (so with Lightroom 6.x only, scripts can be executed when Lightroom is running).
+* 2 scripts available : **lrselect** for generic selection based on various criteria, and **lrsmart** for executing smart collections
 * Options for display sql request, result count, results
 
 
 ## Tested environment
 * OS windows 10 64 bits
-* Lightroom 6.x
+* Lightroom 6.x, Classic CC
 * Python 3.7
 * Scripts running under windows console or cygwin
 
@@ -28,10 +27,34 @@ Modify the config file *lrtools.ini* :
 * LRCatalog : the default Lightroom catalog to use
 * DayFirst :  parsing date format ("DD-MM-YY" if True, else  "YY-MM-DD")
 
+## Using lrtools library
+
+    import sys
+    from lrtools.lrcat import LRCatDB, LRCatException
+    from lrtools.lrselectgeneric import LRSelectException
+    from lrtools.display import display_results
+
+    # open Lightroom catalog
+    try:
+        lrdb = LRCatDB("D:\Lightroom\Mycatalog.lrcat")
+    except LRCatException as _e:
+        sys.exit(' ==> FAILED: %s' % _e)
+
+    # select photos
+    columns = "name,datecapt, keywords"
+    criteria = "datecapt=>=2016-5-15, datecapt=<=2018-1-31, keyword=beach, keyword=family, rating=>3"
+    try:
+        rows = lrdb.lrphoto.select_generic(columns, criteria).fetchall()
+    except LRSelectException as _e:
+        sys.exit(' ==> FAILED: %s' % _e)
+
+    # and display results
+    display_results(rows, columns, header=True)
+
 </br>
 </br>
 
-## **lrselect** script
+## Using **lrselect** script
 Retrieves and displays various informations about photos or collections
 
 It build SQL SELECT request from 2 strings describing informations to display, and criteria to search
@@ -140,11 +163,13 @@ It build SQL SELECT request from 2 strings describing informations to display, a
             - 'ext'        : (str) file extension
             - 'id'         : (int) photo id (Adobe_images.id_local)
             - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
-            - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note. ex: "rating==5"
+            - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note. (ex: "rating==5")
             - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
+            - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
             - 'creator'    : (str) photo creator
             - 'caption'    : (true/false/str) photo caption
             - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
+            - 'modcount'   : (int) number of modifications
             - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
             - 'iso'        : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
             - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
@@ -226,7 +251,7 @@ It build SQL SELECT request from 2 strings describing informations to display, a
 </br>
 
 
-## **lrsmart.py** script
+## Using **lrsmart** script
 Retrieve smart collections stored in catalog, process SQL requests and displays results</br>
 Smart files, exported from Lightroom or modified by hand, can be specified too.</br>
 Unfortunaly :
@@ -234,7 +259,6 @@ Unfortunaly :
  * some operations on criteria doesn't same exact results as Lightroom (as: all, touchtime ...)
 </br>
 => ... TODO improvements !
-
 
 ### Supported criteria
 * all
