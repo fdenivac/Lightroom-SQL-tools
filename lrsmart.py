@@ -13,7 +13,7 @@ import argparse
 from sqlite3 import OperationalError
 
 # config is loaded on import
-from lrtools.lrtoolconfig import lrt_config
+from lrtools.lrtoolconfig import lrt_config, LRConfigException
 
 from lrtools.lrcat import LRCatDB, LRCatException
 from lrtools.lrselectgeneric import LRSelectException
@@ -90,6 +90,10 @@ def main():
 
 
     # open catalog
+    if not args.lrcat.endswith('lrcat'):
+        # specify LR catalog or INI file
+        lrt_config.load(args.lrcat)
+        args.lrcat = lrt_config.default_lrcat
     lrdb = LRCatDB(args.lrcat)
 
     if args.list:
@@ -216,5 +220,5 @@ if __name__ == '__main__':
     except IOError as _e:
         if _e.errno not in [22, 32]:
             raise _e
-    except (LRSelectException, LRCatException) as _e:
+    except (LRConfigException, LRSelectException, LRCatException) as _e:
         print(' ==> FAILED:', _e, file=sys.stderr)

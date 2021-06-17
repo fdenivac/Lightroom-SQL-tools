@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=line-too-long, C0326, unused-variable
+# pylint: disable=invalid-name
+
 """
 
 Configuration for LRTool
@@ -9,7 +10,6 @@ Configuration for LRTool
 import sys
 import os
 from configparser import SafeConfigParser, Error
-from datetime import datetime
 from dateutil import parser as dateparser
 
 class Singleton(type):
@@ -39,13 +39,9 @@ CONFIG_MAIN = 'Main'
 CONFIG_ARCHVOL = 'ArchiveVolume'
 
 
-# defaults volumes for archive : mine
-ARCHIVE_VOLUMES = [ \
-    ( 'PhotosArch1', 'Photos Archives', datetime(1, 1, 1), datetime(2015, 7, 31, 23, 59, 59, 999999)), \
-    ( 'PhotosArch2', 'Photos Archives', datetime(2015, 8, 1), datetime(9999, 1, 1) ), \
-#    ( 'BackupL1', 'phot_2', datetime(1, 1, 1), datetime(2015, 9, 20) ),
-#    ( 'LR', 'phot_3', datetime(2015, 9, 21), datetime(9999, 1, 1) ),
-    ]
+
+class LRConfigException(Exception):
+    ''' lrtools config exception '''
 
 
 
@@ -55,22 +51,48 @@ class LRToolConfig(metaclass=Singleton):
     '''
 
     def __init__(self):
+        ''' load default config '''
+        self.default_lrcat = 'C:\\Users\\Default\\Documents\\My Lightroom Catalog.lrcat'
+        self.default_prod_directory = 'C:\\Users\\Default\\Documents\\Photos\\Production'
+        self.rsync_exe = 'C:\\cygwin64\\bin\\rsync.exe'
+        self.rsync_max_len_line = 4092
+        self.archive_date_fmt = '%%Y/%%m'
+        self.production_date_fmt = '%%Y/%%m'
+        self.fs_encoding = 'cp1252'
+        self.dayfirst = True
+        self.geocoder = 'nominatim'
+        self.archive_volumes = []
 
+        try:
+            self.load(CONFIG_FILENAME)
+        except LRConfigException:
+            print('WARNING: failed to read config file', CONFIG_FILENAME, file=sys.stderr)
+
+
+    def load(self, filename):
+        ''' load a config file '''
+
+        # parser and default value
         parser = SafeConfigParser({ \
-                    'LRCatalog' :'C:\\Users\\Default\\Documents\\My Lightroom Catalog.lrcat', \
-                    'ProdDirectory' : 'C:\\Users\\Default\\Documents\\Photos\\Production', \
-                    'RSyncExe' : 'C:\\cygwin64\\bin\\rsync.exe', \
-                    'RsyncMaxLenLine' : '4092', \
-                    'FSEncoding' : 'cp1252', \
-                    'ArchiveDateFmt' : '%%Y/%%m', \
-                    'ProductionDateFmt' : '%%Y/%%m', \
-                    'DayFirst' : True, \
-                    'GeoCoder' : 'nominatim', \
+                    'LRCatalog' : self.default_lrcat, \
+                    'ProdDirectory' : self.default_prod_directory, \
+                    'RSyncExe' : self.rsync_exe, \
+                    'RsyncMaxLenLine' : self.rsync_max_len_line, \
+                    'FSEncoding' : self.fs_encoding, \
+                    'ArchiveDateFmt' : self.archive_date_fmt, \
+                    'ProductionDateFmt' : self.production_date_fmt, \
+                    'DayFirst' : self.dayfirst, \
+                    'GeoCoder' : self.geocoder, \
                 })
 
         # config file is located in directory where main script is lauched
-        config_file = os.path.join(os.path.dirname(sys.argv[0]), CONFIG_FILENAME)
-        dataset = parser.read(config_file)
+        _dir, _ = os.path.split(filename)
+        if _dir:
+            config_file = filename
+        else:
+            config_file = os.path.join(os.path.dirname(sys.argv[0]), filename)
+
+        parser.read(config_file)
         try:
             self.default_lrcat = parser.get(CONFIG_MAIN, 'LRCatalog')
             self.default_prod_directory = parser.get(CONFIG_MAIN, 'ProdDirectory')
@@ -110,7 +132,7 @@ class LRToolConfig(metaclass=Singleton):
 
 
         except Error as _e:
-            print("ERROR Reading config file %s (%s)"  % (CONFIG_FILENAME, _e))
+            raise LRConfigException('Failed to read config file %s' % filename)
 
 
 lrt_config = LRToolConfig()

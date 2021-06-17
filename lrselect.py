@@ -14,7 +14,7 @@ from argparse import RawTextHelpFormatter
 import sqlite3
 
 # config is loaded on import
-from lrtools.lrtoolconfig import lrt_config
+from lrtools.lrtoolconfig import lrt_config, LRConfigException
 
 from lrtools.lrcat import LRCatDB, LRCatException
 from lrtools.lrselectgeneric import LRSelectException
@@ -61,7 +61,7 @@ def main():
                                      formatter_class=RawTextHelpFormatter)
     parser.add_argument('columns', help='Columns to display', default=DEFAULT_COLUMNS, nargs='?')
     parser.add_argument('criteria', help='Criteria of select', nargs='?')
-    parser.add_argument('-b', '--lrcat', default=lrt_config.default_lrcat, help='Ligthroom catalog file for database request (default:"%(default)s")')
+    parser.add_argument('-b', '--lrcat', default=lrt_config.default_lrcat, help='Ligthroom catalog file for database request (default:"%(default)s"), or INI file (lrtools.ini form)')
     parser.add_argument('-s', '--sql', action='store_true', help='Display SQL request')
     parser.add_argument('-c', '--count', action='store_true', help='Display count of results')
     parser.add_argument('-r', '--results', action='store_true', help='Display datas results')
@@ -96,6 +96,10 @@ def main():
     log.info('arguments: %s', ' '.join(sys.argv[1:]))
 
     # open database
+    if not args.lrcat.endswith('lrcat'):
+        # not a catalog but an INI file
+        lrt_config.load(args.lrcat)
+        args.lrcat = lrt_config.default_lrcat
     lrdb = LRCatDB(args.lrcat)
 
     # select on which table to work
@@ -149,7 +153,7 @@ def main():
     try:
         rows = lrobj.select_generic(args.columns, args.criteria).fetchall()
     except (LRSelectException)  as _e:
-        # TODO: convert specific error caused by a limitation on build SQL with criteria width or height
+        # convert specific error caused by a limitation on build SQL with criteria width or height
         if _e.args[0] == 'no such column: dims':
             _e.args = ('Try to add column "dims"',)
         print(' ==> FAILED:', _e, file=sys.stderr)
@@ -178,7 +182,7 @@ if __name__ == '__main__':
     except IOError as _e:
         if _e.errno not in [22, 32]:
             raise _e
-    except (LRSelectException, LRCatException) as _e:
+    except (LRConfigException, LRSelectException, LRCatException) as _e:
         print(' ==> FAILED:', _e, file=sys.stderr)
     except sqlite3.OperationalError as _e:
         print(' ==> FAILED SQL :', _e, file=sys.stderr)
