@@ -169,7 +169,7 @@ class LRSelectPhoto(LRSelectGeneric):
             { \
                 'name' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local', \
-                    ' UPPER(fi.baseName) LIKE "%s"', \
+                    ' UPPER(fi.baseName || COALESCE(i.copyName, "")) LIKE "%s"', \
                     ],
                 'exactname' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local', \
