@@ -82,6 +82,12 @@ class LRSelectPhoto(LRSelectGeneric):
                 'name' : [ 'count(name) AS countname' ,  None ], \
                 'master' : [ 'count(masterimage) AS countmaster' ,  None ], \
                 }, \
+            'stack' : { \
+                'True' :  \
+                    [   'fsi.stack AS stack', \
+                        [ 'LEFT JOIN AgLibraryFolderStackImage fsi ON i.id_local = fsi.image' ] \
+                    ] \
+                }, \
             'stackpos' : { \
                 'True' :  \
                     [   'fsi.position AS stackpos', \
@@ -364,14 +370,21 @@ class LRSelectPhoto(LRSelectGeneric):
 
     def func_stacks(self, value):
         ''' specific value for photos stack '''
-        if value == 'only':
+        if value in ['top', 'first']:
+            # photos at top of each stack
             return 'fsi.position=1.0'
-        if value == 'none':
+        if value in ['no', 'none', 'false']:
+            # photos not in a stack
             return 'fsi.image is NULL'
-        if value == 'one':
+        if value in ['no+top', 'one']:
+            # photos not in stack, and photos at top of each stack
             return '(fsi.image is NULL OR fsi.position=1.0)'
-        else:
-            raise LRSelectException('invalid "stacks" value "%s"' % value)
+        if value in ['yes', 'all', 'true']:
+            # photos in a stack
+            return 'fsi.image is NOT NULL'
+        if value.isnumeric():
+            return 'fsi.stack=%s' % value
+        raise LRSelectException('invalid "stacks" value "%s"' % value)
 
     def func_exifindex(self, value):
         '''  specific value for search exif '''
@@ -579,6 +592,7 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'xmp'        : all xmp metadatas
             - 'vname'      : virtual copy name
             - 'stackpos'   : position in stack
+            - 'stack'      : stack identifier
             - 'keywords'   : keywords list
             - 'collections': collections list
             - 'exif'       : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
@@ -631,9 +645,11 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'haskeywords': (bool) photos with or without keywords
             - 'import'     : (int) import id
             - 'stacks'     : operation on stacks in :
-                    'only' = selects only the photos in stacks
-                    'none' = excludes the photos in stacks
-                    'one'  = excludes the photos in stacks not at first position
+                    'yes'    = photos in a stack
+                    'no'     = excludes photos in a stack
+                    'top'    = photos at the top of stacks
+                    'no+top' = excludes photos in a stack not at first position
+                    <NUM>    = photos in the stack identifier NUM
             - 'metastatus' :  metadatas status
                     'conflict' = metadatas different on disk from db
                     'changedondisk' = metadata changed externally on disk

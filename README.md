@@ -138,6 +138,7 @@ It build SQL SELECT request from 2 strings describing informations to display, a
             - 'xmp'        : all xmp metadatas
             - 'vname'      : virtual copy name
             - 'stackpos'   : position in stack
+            - 'stack'      : stack identifier
             - 'keywords'   : keywords list
             - 'collections': collections list
             - 'exif'       : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
@@ -190,9 +191,11 @@ It build SQL SELECT request from 2 strings describing informations to display, a
             - 'haskeywords': (bool) photos with or without keywords
             - 'import'     : (int) import id
             - 'stacks'     : operation on stacks in :
-                    'only' = selects only the photos in stacks
-                    'none' = excludes the photos in stacks
-                    'one'  = excludes the photos in stacks not at first position
+                    'yes'    = photos in a stack
+                    'no'     = excludes photos in a stack
+                    'top'    = photos at the top of stacks
+                    'no+top' = excludes photos in a stack not at first position
+                    <NUM>    = photos in the stack identifier NUM                    
             - 'metastatus' :  metadatas status
                     'conflict' = metadatas different on disk from db
                     'changedondisk' = metadata changed externally on disk
