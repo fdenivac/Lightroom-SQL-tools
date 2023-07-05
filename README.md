@@ -2,7 +2,7 @@
 Python library and scripts to retrieve and displays photos informations from lightroom catalog
 
 * Execute SQL requests outside of Lightroom
-* Catalog opened in read only (so with Lightroom 6.x only, scripts can be executed when Lightroom is running).
+* Catalog opened in read only, so scripts can be executed when Lightroom is running.
 * 2 scripts available : **lrselect** for generic selection based on various criteria, and **lrsmart** for executing smart collections
 * Options for display sql request, result count, results
 
@@ -10,7 +10,7 @@ Python library and scripts to retrieve and displays photos informations from lig
 ## Tested environment
 * OS windows 10 64 bits
 * Lightroom 6.x, Classic CC
-* Python 3.7
+* Python >= 3.7
 * Scripts running under windows console or cygwin
 
 

@@ -81,8 +81,8 @@ class LRCatDB():
     '''
     Build SQL requests for a Lightroom database
 
-    The database is opened in read-only, with cache local and without lock.
-    So Lightroom can be opened while running python scripts using this module
+    The database is opened by default in read-only, with cache local and as immutable (needed by Lightroom >= version 8).
+    So Lightroom can be opened while running python scripts using this module.
 
     '''
 
@@ -91,7 +91,7 @@ class LRCatDB():
     SMART_COLL = 3
 
 
-    def __init__(self, lrcat_file):
+    def __init__(self, lrcat_file, open_options="mode=ro&cache=private&immutable=1"):
         self.conn = self.cursor = self.lrdb_version = None
         def open_db(uri):
             try:
@@ -109,15 +109,11 @@ class LRCatDB():
             raise LRCatException('LR catalog doesn\'t exist')
         log = logging.getLogger()
         log.info('sqlite3 binding version : %s , sqlite3 version : %s', sqlite3.version, sqlite3.sqlite_version)
-        if not open_db('file:%s?mode=ro&cache=private&nolock=1' % self.lrcat_file):
-            # unfortunaly Lightroom classic catalogs (at least version 8) fails to be opened with nolock...
-            # So try withoput nolock
-            if not open_db('file:%s?mode=ro&cache=private' % self.lrcat_file):
-                # But can fails too if Lightroom is running : Ligthroom open catalog in exclusive mode. No solution found !
-                log.info('Failed to open "%s" with uri "mode=ro&cache=private"', self.lrcat_file)
-                raise LRCatException('Unable to open LR catalog')
+        modes = "?%s" % open_options if open_options else ""
+        if not open_db('file:%s%s' % (self.lrcat_file, modes)):
+            log.info('Failed to open "%s" with uri "%s"', self.lrcat_file, open_options)
+            raise LRCatException('Unable to open LR catalog')
         self.lrphoto = LRSelectPhoto(self)
-
 
 
     def has_basename(self, name):
