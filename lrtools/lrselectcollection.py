@@ -80,7 +80,7 @@ class LRSelectCollection(LRSelectGeneric):
         if value == 'all':
             return 'creationId="com.adobe.ag.library.smart_collection" OR creationId="com.adobe.ag.library.collection"'
         else:
-            return 'creationId="%s"' % value
+            return f'creationId="{value}"'
 
 
 

@@ -366,7 +366,7 @@ class LRSelectPhoto(LRSelectGeneric):
             return 'am.externalXmpIsDirty=1 and i.sidecarStatus = 1.0'
         if value == 'uptodate':
             return 'am.externalXmpIsDirty=0 and i.sidecarStatus = 0.0'
-        raise LRSelectException('invalid "metastatus" value "%s"' % value)
+        raise LRSelectException(f'invalid "metastatus" value "{value}"')
 
     def func_stacks(self, value):
         ''' specific value for photos stack '''
@@ -383,8 +383,8 @@ class LRSelectPhoto(LRSelectGeneric):
             # photos in a stack
             return 'fsi.image is NOT NULL'
         if value.isnumeric():
-            return 'fsi.stack=%s' % value
-        raise LRSelectException('invalid "stacks" value "%s"' % value)
+            return f'fsi.stack={value}'
+        raise LRSelectException(f'invalid "stacks" value "{value}"')
 
     def func_exifindex(self, value):
         '''  specific value for search exif '''
@@ -394,7 +394,7 @@ class LRSelectPhoto(LRSelectGeneric):
             action = (' OR ', '|')
         else:
             action = (' ', '__')
-        return action[0].join([ 'msi.exifSearchIndex LIKE "%%/t%s/t%%"' % val for val in value.split(action[1])])
+        return action[0].join([f'msi.exifSearchIndex LIKE "%%/t{val}/t%%"' for val in value.split(action[1])])
 
     def func_titleindex(self, value):
         '''  specific value for title : in otherSearchIndex column '''
@@ -404,7 +404,7 @@ class LRSelectPhoto(LRSelectGeneric):
             action = (' OR ', '|')
         else:
             action = (' ', '__')
-        return action[0].join([ 'msi.otherSearchIndex LIKE "%%/t%s/t%%"' % val for val in value.split(action[1])])
+        return action[0].join([ f'msi.otherSearchIndex LIKE "%%/t{val}/t%%"' for val in value.split(action[1])])
 
     def func_aperture(self, value):
         '''
@@ -422,12 +422,12 @@ class LRSelectPhoto(LRSelectGeneric):
             raise LRSelectException('invalid aperture value')
         if not oper:
             oper = '='
-        return '%s %s' % (oper, 2 * math.log(float(value), 2))
+        return f"{oper} {2 * math.log(float(value), 2)}"
 
     def func_speed(self, value):
         '''
         convert speed value in seconds to LR value : log base 2 of Nth of speed
-        ex: ">1/1000" for 1/1000s, "<5" for 5 seconds
+        ex: ">=1/1000" for 1/1000s, "<5" for 5 seconds
         '''
         for index, char in enumerate(value):
             if char.isnumeric():
@@ -435,10 +435,15 @@ class LRSelectPhoto(LRSelectGeneric):
                 value = value[index:]
                 break
         try:
-            value = eval(value)
-            value = '%s %s' % (oper, math.log(float(1/value), 2))
+            if '/' in value:
+                _n, _d = value.split('/')
+                value = int(_n) / int(_d)
+            else:
+                value = int(value)
+            # use 6 digits, as lightroom, for correct use with operator "="
+            value = f"{oper} {math.log(float(1/value), 2):.6f}"
         except ValueError as _e:
-            raise LRSelectException(_e)
+            raise LRSelectException(_e) from _e
         return value
 
     def func_haskeywords(self, value):
@@ -487,8 +492,8 @@ class LRSelectPhoto(LRSelectGeneric):
             try:
                 (lat, lon), address = geocodage(town)
                 log.info('Geocodage for %s : %s, %s (%s)', town, lat, lon, address)
-            except TypeError:
-                raise LRSelectException('Town coordinates not found')
+            except TypeError as _e:
+                raise LRSelectException('Town coordinates not found') from _e
             (lat1, lon1), (lat2, lon2) = square_around_location(lat, lon, width)
         elif re_2town.match(value):
             town1, town2 = re_2town.match(value).groups()
@@ -497,15 +502,14 @@ class LRSelectPhoto(LRSelectGeneric):
                 (lat2, lon2), address2 = geocodage(town2)
                 log.info('Geocodage for %s : %s, %s (%s)', town1, lat1, lon1, address1)
                 log.info('Geocodage for %s : %s, %s (%s)', town2, lat2, lon2, address2)
-            except TypeError:
-                raise LRSelectException('Town coordinates not found')
+            except TypeError as _e:
+                raise LRSelectException('Town coordinates not found') from _e
         else:
             raise LRSelectException('GPS coordinates malformed')
 
         lat1, lat2 = reorder(lat1, lat2)
         lon1, lon2 = reorder(lon1, lon2)
-        return '(em.hasGps = 1 AND em.gpsLatitude BETWEEN %s AND %s AND em.gpsLongitude BETWEEN %s AND %s)' % \
-                (lat1, lat2, lon1, lon2)
+        return f"(em.hasGps = 1 AND em.gpsLatitude BETWEEN {lat1} AND {lat2} AND em.gpsLongitude BETWEEN {lon1} AND {lon2})"
 
     def func_published(self, value):
         '''
@@ -513,7 +517,7 @@ class LRSelectPhoto(LRSelectGeneric):
         '''
         if value == 'True':
             return 'i.id_local = pci.image'
-        return '(i.id_local = pci.image AND pc.name = "%s" COLLATE NOCASE)' % value
+        return f'(i.id_local = pci.image AND pc.name = "{value}" COLLATE NOCASE)'
 
     def func_pubtime(self, value):
         '''
@@ -521,17 +525,17 @@ class LRSelectPhoto(LRSelectGeneric):
         '''
         if value == 'True':
             return 'i.id_local = pci.image'
-        return '(i.id_local = pci.image AND pc.name = "%s" COLLATE NOCASE)' % value
+        return f'(i.id_local = pci.image AND pc.name = "{value}" COLLATE NOCASE)'
 
     def func_rating(self, value):
         '''
         select rating
         '''
         if value[0] == '<' or value == '>=0':
-            return '(i.rating IS NULL OR i.rating %s)' % value
+            return f"(i.rating IS NULL OR i.rating {value})"
         if value == "=0":
             return 'i.rating IS NULL'
-        return 'i.rating %s' % value
+        return f"i.rating {value}"
 
     def func_flag(self, value):
         '''

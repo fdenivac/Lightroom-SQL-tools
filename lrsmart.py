@@ -110,11 +110,11 @@ def main():
 
     for smart_name in args.smart_name:
         if not args.file:
-            print('Smart Collection "%s"' % smart_name)
+            print(f'Smart Collection "{smart_name}"')
         if args.raw:
             if args.file:
                 try:
-                    for line in open(smart_name).read().splitlines():
+                    for line in open(smart_name, encoding='utf-8').read().splitlines():
                         print(line)
                 except OSError:
                     print("  ==> FAILED : Not found")
@@ -130,9 +130,9 @@ def main():
 
         try:
             if args.file:
-                print('Smart Collection filename "%s"' % (smart_name))
+                print(f'Smart Collection filename "{smart_name}"')
                 try:
-                    smart = open(smart_name, 'r').read()
+                    smart = open(smart_name, 'r', encoding='utf-8').read()
                     smart = smart[smart.find('{'):]
                     # smart = smart[4:]
                     lua = SLPP()
@@ -143,7 +143,7 @@ def main():
                         smart_title = smart['title']
                     else:
                         smart_title = smart_name
-                    print(' * Collection name : "%s"' % (smart_title))
+                    print(f' * Collection name : "{smart_title}"')
                     smart = smart['value']
                 except OSError:
                     print('  ==> FAILED : Not found')
@@ -198,7 +198,7 @@ def main():
                 if count_smart[smart_name] == len(rows):
                     print('=> conform to LR', end='')
                 else:
-                    print('=> NOT_CONFORM to LR : %s' % count_smart[smart_name], end='')
+                    print(f'=> NOT_CONFORM to LR : {count_smart[smart_name]}', end='')
             print()
 
         if args.results:

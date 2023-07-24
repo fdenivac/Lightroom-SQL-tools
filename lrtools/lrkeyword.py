@@ -74,8 +74,8 @@ class LRKeywords():
                 hname_next += '|'
             for k in self.tree[pid]:
                 if k in self.tree:
-                    _build(k, '%s%s' % (hname_next, self.id2keyname[k]), hkeys)
-                hkeys[k] = '%s%s' % (hname_next, self.id2keyname[k])
+                    _build(k, f"{hname_next}{self.id2keyname[k]}", hkeys)
+                hkeys[k] = f"{hname_next}{self.id2keyname[k]}"
         if not self.tree:
             self._init_hierarchical_keywords()
         hkeywords = dict()
@@ -124,12 +124,12 @@ class LRKeywords():
         keynames = list()
         hkeynames = list()
         if include_persons:
-            self.lrdb.cursor.execute('SELECT tag FROM AgLibraryKeywordImage WHERE image=%s' % idphoto)
+            self.lrdb.cursor.execute(f'SELECT tag FROM AgLibraryKeywordImage WHERE image={idphoto}')
             for idkey, in self.lrdb.cursor.fetchall():
                 hkeynames.append(self.get_hierarchical_name(idkey))
                 keynames.append(self.get_name(idkey))
         else:
-            self.lrdb.cursor.execute('SELECT tag, name, keywordType FROM AgLibraryKeywordImage ki JOIN AgLibraryKeyword k ON ki.tag = k.id_local WHERE image=%s' % idphoto)
+            self.lrdb.cursor.execute(f'SELECT tag, name, keywordType FROM AgLibraryKeywordImage ki JOIN AgLibraryKeyword k ON ki.tag = k.id_local WHERE image={idphoto}')
             for idkey, name, ktype in self.lrdb.cursor.fetchall():
                 if ktype == 'person':
                     continue
@@ -149,38 +149,38 @@ class LRKeywords():
             * all, any, noneOf : find all occurences of key_part in keywords
         '''
         key_part = key_part.lower()
-        key = '"%%%s%%"' % key_part
+        key = f'"%%{key_part}%%"'
 
         def find_sub_indexes(index, indexes):
-            self.lrdb.cursor.execute('SELECT id_local FROM AgLibraryKeyword WHERE parent = %s' % index)
+            self.lrdb.cursor.execute(f'SELECT id_local FROM AgLibraryKeyword WHERE parent = {index}')
             sub_indexes = self.lrdb.cursor.fetchall()
             for sub_index, in sub_indexes:
                 indexes.append(int(sub_index))
                 find_sub_indexes(int(sub_index), indexes)
 
         if operation == 'words':
-            self.lrdb.cursor.execute('SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key)
+            self.lrdb.cursor.execute(f'SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE {key}')
             rows = []
             for row in self.lrdb.cursor.fetchall():
                 # check if complete word in keyword
                 if key_part.lower() in row[1].split():
                     rows.append((row[0],))
         elif operation == 'endsWith':
-            self.lrdb.cursor.execute('SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key)
+            self.lrdb.cursor.execute(f'SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE {key}')
             rows = []
             for row in self.lrdb.cursor.fetchall():
                 for word in row[1].split():
                     if word.endswith(key_part):
                         rows.append((row[0],))
         elif operation == 'beginsWith':
-            self.lrdb.cursor.execute('SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key)
+            self.lrdb.cursor.execute(f'SELECT id_local, lc_name FROM AgLibraryKeyword WHERE lc_name LIKE {key}')
             rows = []
             for row in self.lrdb.cursor.fetchall():
                 for word in row[1].split():
                     if word.startswith(key_part):
                         rows.append((row[0],))
         else:
-            rows = self.lrdb.cursor.execute('SELECT id_local FROM AgLibraryKeyword WHERE lc_name LIKE %s' % key).fetchall()
+            rows = self.lrdb.cursor.execute(f'SELECT id_local FROM AgLibraryKeyword WHERE lc_name LIKE {key}').fetchall()
         if not rows:
             return []
         indexes = []

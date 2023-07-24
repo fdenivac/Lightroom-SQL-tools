@@ -1,8 +1,11 @@
-import re
-
+# -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines,line-too-long,invalid-name, missing-class-docstring, missing-function-docstring
 '''
 from old version of project https://github.com/SirAnthony/slpp
 '''
+
+import re
+
 
 class SLPP:
 
@@ -14,18 +17,21 @@ class SLPP:
         self.depth = 0
 
     def decode(self, text):
-        if not text or type(text).__name__ != 'str': return
+        if not text or type(text).__name__ != 'str':
+            return
         text = re.sub('---.*$', '', text, 0, re.M)
         self.text = text
         self.at, self.ch, self.depth = 0, '', 0
         self.len = len(text)
         self.next_chr()
         result = self.value()
-        if not result: return
+        if not result:
+            return
         return result
 
     def encode(self, obj):
-        if not obj: return
+        if not obj:
+            return
         self.depth = 0
         return self.__encode(obj)
 
@@ -78,10 +84,14 @@ class SLPP:
 
     def value(self):
         self.white()
-        if not self.ch or self.ch == '': return
-        if self.ch == '{': return self.object()
-        if self.ch == '"': return self.string()
-        if self.ch.isdigit() or self.ch == '-': return self.number()
+        if not self.ch or self.ch == '':
+            return
+        if self.ch == '{':
+            return self.object()
+        if self.ch == '"':
+            return self.string()
+        if self.ch.isdigit() or self.ch == '-':
+            return self.number()
         return self.word()
 
     def string(self):
@@ -116,10 +126,12 @@ class SLPP:
                 elif self.ch == '}':
                     self.depth -= 1
                     self.next_chr()
-                    if k: o[idx] = k
+                    if k:
+                        o[idx] = k
                     if len([ key for key in o if type(key).__name__ == 'str' ]) == 0:
                         ar = []
-                        for key in o: ar.insert(key, o[key])
+                        for key, val in o.items():
+                            ar.insert(key, val)
                         o = ar
                     return o #or here
                 else:
@@ -145,7 +157,7 @@ class SLPP:
     def word(self):
         s = ''
         if self.ch != '\n':
-          s = self.ch
+            s = self.ch
         while self.next_chr():
             if self.ch.isalnum():
                 s += self.ch

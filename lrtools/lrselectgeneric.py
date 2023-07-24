@@ -101,7 +101,7 @@ class LRSelectGeneric():
                 'col.name = "%s"' ]                   ]
         '''
         self.lrdb = lrdb
-        self.from_table = 'FROM %s' % main_table
+        self.from_table = f"FROM {main_table}"
         self.froms = None
         self.column_description = columns
         self.criteria_description = criteria
@@ -133,9 +133,9 @@ class LRSelectGeneric():
         # value is it year, month/year or day/month/year ?
         nparts = len(re.findall(r'\d+', value))
         if nparts <= 3:
-            sql = 'DATE(i.captureTime, "{0}") {1} DATE("{2}", "{0}")'.format(STARTS_OF_DATE[nparts], oper, date)
+            sql = f'DATE(i.captureTime, "{STARTS_OF_DATE[nparts]}") {oper} DATE("{date}", "{STARTS_OF_DATE[nparts]}")'
         else:
-            sql = 'i.captureTime {0} "{1}"'.format(oper, date.strftime('%Y-%m-%dT%H:%M:%S'))
+            sql = f'i.captureTime {oper} "{date.strftime("""%Y-%m-%dT%H:%M:%S""")}"'
         return sql
 
     def func_oper_dateloc_to_lrstamp(self, value):
@@ -185,7 +185,7 @@ class LRSelectGeneric():
         elif value in ['!null', 'true']:
             value = "NOT NULL"
         else:
-            value = '= "%s"' % value
+            value = f'= "{value}"'
         return value
 
     def func_like_value_or_null(self, value):
@@ -196,7 +196,7 @@ class LRSelectGeneric():
         elif value in ['!null', 'true']:
             value = "NOT NULL"
         else:
-            value = 'LIKE "%s"' % value
+            value = f'LIKE "{value}"'
         return value
 
     def func_value_or_not_equal(self, value):
@@ -207,7 +207,7 @@ class LRSelectGeneric():
                 return ('<>', '""')
             return ('==', '""')
         except LRSelectException:
-            return ('=', '"%s"' % value)
+            return ("=", f'"{value}"')
 
 
 
@@ -236,10 +236,12 @@ class LRSelectGeneric():
                         _k = keyval
                         _v = 'True'
                     else:
-                        raise LRSelectException('No value after = on %s' % keyval)
+                        raise LRSelectException(f"No value after = on {keyval}")
                 pairs.append({_k : _v})
-        except Exception:
-            raise LRSelectException('Invalid key/value syntax (%s in %s)' % (keyval, strlist))
+        except Exception as _e:
+            raise LRSelectException(
+                f"Invalid key/value syntax ({keyval} in {strlist})"
+            ) from _e
         return pairs
 
 
@@ -278,14 +280,14 @@ class LRSelectGeneric():
                     col_sql = self.remove_quotes(value[len(self._VAR_FIELD):])
                 else:
                     if value not in dvalues.keys():
-                        raise LRSelectException('Invalid value "%s" on column "%s"' % (value, key))
+                        raise LRSelectException(f'Invalid value "{value}" on column "{key}"')
                     col_sql, from_sql = dvalues[value]
                 if case in ['count', 'countby']:
                     parts = col_sql.split(' ')
                     if len(parts) == 1:
-                        sqlcols.append('count(%s)' % col_sql)
+                        sqlcols.append(f"count({col_sql})")
                     elif len(parts) == 3 and parts[1].upper() == 'AS':
-                        sqlcols.append('count(%s) AS count_%s' % (parts[0], parts[2]))
+                        sqlcols.append(f"count({parts[0]}) AS count_{parts[2]}")
                         if case == 'countby':
                             self.groupby = f'GROUP BY {parts[0]}'
                     else:
@@ -294,8 +296,8 @@ class LRSelectGeneric():
                     sqlcols.append(col_sql)
                 if from_sql:
                     self._add_from(from_sql, sqlfroms)
-            except KeyError:
-                raise LRSelectException('invalid column key "%s"' % key)
+            except KeyError as _e:
+                raise LRSelectException(f'invalid column key "{key}"') from _e
 
         # ENTRY columns_to_sql(self, ...)
         for keyval in self._keyval_to_keys(columns):
@@ -375,14 +377,14 @@ class LRSelectGeneric():
 
         lex = CriterLexer(criters)
         if criters and not lex.parse():
-            raise LRSelectException('Criteria syntax error : %s' %  lex.last_error)
+            raise LRSelectException(f"Criteria syntax error : {lex.last_error}")
         token2sql = {'LPAR': '(', 'RPAR': ')', 'AND': 'AND', 'OR': 'OR'}
 
         # process tokens
         prev_optoken = None
         has_where = False
         for token, data in lex.tokens:
-            if token in token2sql.keys():
+            if token in token2sql:
                 # add previous token if any
                 if prev_optoken:
                     wheres.append(token2sql[prev_optoken])
@@ -390,7 +392,7 @@ class LRSelectGeneric():
                 continue
 
             if token != 'KEYVAL':
-                LRSelectException('Invalid Token : "%s"' % token)
+                raise LRSelectException(f'Invalid Token : "{token}"')
             key, value = data
             value = self.remove_quotes(value)
             if not key in nb_wheres:
@@ -398,7 +400,7 @@ class LRSelectGeneric():
             else:
                 nb_wheres[key] += 1
             if not key in self.criteria_description:
-                raise LRSelectException('No existent criterion "%s"' %  key)
+                raise LRSelectException(f'No existent criterion "{key}"')
             criter_desc = self.criteria_description[key]
             if len(criter_desc) == 2:
                 _from, _where = criter_desc
@@ -406,15 +408,15 @@ class LRSelectGeneric():
                 _from, _where, func = criter_desc
                 try:
                     value = func(value)
-                except TypeError:
-                    raise LRSelectException('Syntax error on criterion "%s"' % key)
+                except TypeError as _e:
+                    raise LRSelectException(f'Syntax error on criterion "{key}"') from _e
             # some specific keywords for SQL
             if key == 'sort':       # specific key 'sort' for sql 'ORDER BY'
                 way = 'DESC'
                 if value[0] == '-':
                     way = 'ASC'
                     value = value[1:]
-                sort = 'ORDER BY %s %s' % (value, way)
+                sort = f"ORDER BY {value} {way}"
                 prev_optoken = None
                 continue
             if key == 'distinct':      # specific key 'sort' for sql 'SELECT DISTINCT'
@@ -425,9 +427,9 @@ class LRSelectGeneric():
             if _from:
                 if isinstance(_from, str):
                     _from = [_from]
-                _from = [_f.replace('<NUM>', '%s' % nb_wheres[key]) for  _f in _from]
+                _from = [_f.replace("<NUM>", f"{nb_wheres[key]}") for _f in _from]
                 self._add_from(_from, self.froms)
-            _where = _where.replace('<NUM>', '%s' % nb_wheres[key])
+            _where = _where.replace("<NUM>", f"{nb_wheres[key]}")
             if '%s' in _where:
                 _where = _where % value
 
@@ -458,7 +460,7 @@ class LRSelectGeneric():
             fields = 'rf.absolutePath || fo.pathFromRoot || fi.baseName || "." || fi.extension '
         self.froms = ' '.join(self.froms)
         if wheres:
-            wheres = 'WHERE %s' % ' '.join(wheres)
+            wheres = f'WHERE {" ".join(wheres)}'
         else:
             wheres = ''
 
@@ -467,5 +469,5 @@ class LRSelectGeneric():
         elif not select_type:
             select_type = 'SELECT'
 
-        sql = '%s  %s %s %s %s %s' % (select_type, fields, self.froms, wheres, self.groupby, sort)
+        sql = f"{select_type}  {fields} {self.froms} {wheres} {self.groupby} {sort}"
         return _finalize(sql)

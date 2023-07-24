@@ -9,7 +9,7 @@ Configuration for LRTool
 
 import sys
 import os
-from configparser import SafeConfigParser, Error
+from configparser import ConfigParser, Error
 from dateutil import parser as dateparser
 
 class Singleton(type):
@@ -73,7 +73,7 @@ class LRToolConfig(metaclass=Singleton):
         ''' load a config file '''
 
         # parser and default value
-        parser = SafeConfigParser({ \
+        parser = ConfigParser({ \
                     'LRCatalog' : self.default_lrcat, \
                     'ProdDirectory' : self.default_prod_directory, \
                     'RSyncExe' : self.rsync_exe, \
@@ -114,9 +114,9 @@ class LRToolConfig(metaclass=Singleton):
                 self.archive_volumes = []
                 idvol = 1
                 while True:
-                    if not parser.has_option(CONFIG_ARCHVOL, 'VOLUME%s' % idvol):
+                    if not parser.has_option(CONFIG_ARCHVOL, f'VOLUME{idvol}'):
                         break
-                    archvol = parser.get(CONFIG_ARCHVOL, 'VOLUME%s' % idvol)
+                    archvol = parser.get(CONFIG_ARCHVOL, f'VOLUME{idvol}')
                     #print archvol
                     try:
                         volname, dirname, datestart, dateend = archvol.split(',')
@@ -125,14 +125,14 @@ class LRToolConfig(metaclass=Singleton):
                         datestart = dateparser.parse(datestart)
                         dateend = dateparser.parse(dateend)
                     except ValueError:
-                        print('ERROR section %s invalid' % CONFIG_ARCHVOL)
+                        print(f'ERROR section {CONFIG_ARCHVOL} invalid')
                         sys.exit(0)
                     self.archive_volumes.append((volname, dirname, datestart, dateend))
                     idvol += 1
 
 
         except Error as _e:
-            raise LRConfigException('Failed to read config file %s' % filename)
+            raise LRConfigException(f'Failed to read config file "{filename}"') from _e
 
 
 lrt_config = LRToolConfig()

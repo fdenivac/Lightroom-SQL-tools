@@ -7,8 +7,6 @@ GPS functions
 '''
 import math
 import fractions
-import json
-import requests
 import geopy
 from geopy.exc import GeocoderTimedOut
 
@@ -116,7 +114,7 @@ def geocodage(address):
         details = ''
         if lrt_config.geocoder.lower() == 'banfrance':
             location = geopy.geocoders.BANFrance().geocode(address, timeout=5)
-            details = ' (%s), %s' % (location.raw['properties']['postcode'], location.raw['properties']['context'])
+            details = f" ({location.raw['properties']['postcode']}), {location.raw['properties']['context']}"
         elif lrt_config.geocoder.lower() == 'nominatim':
             location = geopy.geocoders.Nominatim(user_agent='lrtools').geocode(address, timeout=5)
         else:
@@ -124,5 +122,3 @@ def geocodage(address):
         return (location.latitude, location.longitude), location.address + details
     except (AttributeError, GeocoderTimedOut):
         return None
-
-

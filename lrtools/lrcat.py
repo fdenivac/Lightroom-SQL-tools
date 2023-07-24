@@ -32,7 +32,6 @@ def date_to_lrstamp(mydate, localtz=True):
         else:
             dtdate = dtdate.astimezone(utczone)
     elif isinstance(mydate, datetime):
-        # TODO check tzinfo
         dtdate = mydate
     else:
         return None
@@ -109,8 +108,8 @@ class LRCatDB():
             raise LRCatException('LR catalog doesn\'t exist')
         log = logging.getLogger()
         log.info('sqlite3 binding version : %s , sqlite3 version : %s', sqlite3.version, sqlite3.sqlite_version)
-        modes = "?%s" % open_options if open_options else ""
-        if not open_db('file:%s%s' % (self.lrcat_file, modes)):
+        modes = f"?{open_options if open_options else ''}"
+        if not open_db(f"file:{self.lrcat_file}{modes}"):
             log.info('Failed to open "%s" with uri "%s"', self.lrcat_file, open_options)
             raise LRCatException('Unable to open LR catalog')
         self.lrphoto = LRSelectPhoto(self)
@@ -134,8 +133,7 @@ class LRCatDB():
         sqlcols = []
         sqlfroms = ['Adobe_images i']
         self.lrphoto.columns_to_sql(columns, sqlcols, sqlfroms)
-        sql = 'SELECT %s FROM %s WHERE i.masterImage=%s OR i.id_local=%s ORDER BY i.id_local' % \
-                     (', '.join(sqlcols), ' '.join(sqlfroms), master, master)
+        sql = f"SELECT {', '.join(sqlcols)} FROM {' '.join(sqlfroms)} WHERE i.masterImage={master} OR i.id_local={master} ORDER BY i.id_local"
         self.cursor.execute(sql)
         return self.cursor
 
@@ -168,10 +166,12 @@ class LRCatDB():
             - import_id: import detor None for all imports
         '''
         if import_id:
-            sql = 'SELECT id_local, importDate,' \
-                ' (SELECT COUNT(ii.import) FROM AgLibraryImport i JOIN AgLibraryImportImage ii ON i.id_local = ii.import' \
-                ' WHERE i.id_local = %s) AS count' \
-                ' FROM AgLibraryImport WHERE id_local = %s' % (import_id, import_id)
+            sql = (
+                "SELECT id_local, importDate,"
+                " (SELECT COUNT(ii.import) FROM AgLibraryImport i JOIN AgLibraryImportImage ii ON i.id_local = ii.import"
+                f" WHERE i.id_local = {import_id}) AS count"
+                f" FROM AgLibraryImport WHERE id_local = {import_id}"
+            )
         else:
             sql = 'SELECT id_local, importDate ,' \
                 ' (SELECT COUNT(ii.import) FROM AgLibraryImport i ' \
@@ -222,17 +222,23 @@ class LRCatDB():
         # valid too : SELECT COUNT(captureTime),  DATE(captureTime, 'start of month') FROM Adobe_images  GROUP BY DATE(captureTime, 'start of month')
         if not date_end:
             date_end = datetime.now()
-        if mode == 'by_day':
-            sql = 'SELECT strftime("%%Y-%%m-%%d", DATE(captureTime, "start of day")) as day, COUNT(captureTime) AS count' \
-                ' FROM Adobe_images WHERE captureTime >= "%s" AND captureTime < "%s" GROUP BY DATE(captureTime, "start of day")' % (date_start, date_end)
-        elif mode == 'by_month':
-            sql = 'SELECT strftime("%%Y-%%m", DATE(captureTime, "start of month")) as month, COUNT(captureTime) AS count'\
-                ' FROM Adobe_images WHERE captureTime >= "%s" AND captureTime < "%s" GROUP BY DATE(captureTime, "start of month")' % (date_start, date_end)
-        elif mode == 'by_year':
-            sql = 'SELECT strftime("%%Y", DATE(captureTime, "start of year")) as year, COUNT(captureTime) AS count'\
-                ' FROM Adobe_images WHERE captureTime >= "%s" AND captureTime <= "%s" GROUP BY DATE(captureTime, "start of year")' % (date_start, date_end)
+        if mode == "by_day":
+            sql = (
+                'SELECT strftime("%%Y-%%m-%%d", DATE(captureTime, "start of day")) as day, COUNT(captureTime) AS count'
+                f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime < "{date_end}" GROUP BY DATE(captureTime, "start of day")'
+            )
+        elif mode == "by_month":
+            sql = (
+                'SELECT strftime("%%Y-%%m", DATE(captureTime, "start of month")) as month, COUNT(captureTime) AS count'
+                f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime < "{date_end}" GROUP BY DATE(captureTime, "start of month")'
+            )
+        elif mode == "by_year":
+            sql = (
+                'SELECT strftime("%%Y", DATE(captureTime, "start of year")) as year, COUNT(captureTime) AS count'
+                f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime <= "{date_start}" GROUP BY DATE(captureTime, "start of year")'
+            )
         else:
-            print('BUG')
+            print("BUG")
             sys.exit(0)
         if kwargs.get('sql'):
             return sql
@@ -254,8 +260,9 @@ class LRCatDB():
             where = 'creationId="com.adobe.ag.library.smart_collection" OR creationId="com.adobe.ag.library.collection"'
         if collname:
             oper = 'LIKE' if '%' in collname else '='
-            where += ' AND name %s "%s" COLLATE NOCASE' % (oper, collname)
-        self.cursor.execute('SELECT id_local, name, creationId FROM AgLibraryCollection WHERE %s ORDER BY name ASC' % where)
+            where += f' AND name {oper} "{collname}" COLLATE NOCASE'
+        self.cursor.execute(f"SELECT id_local, name, creationId FROM AgLibraryCollection WHERE {where} ORDER BY name ASC")
+
         return self.cursor.fetchall()
 
 
@@ -273,9 +280,9 @@ class LRCatDB():
         '''
         try:
             name_or_id = int(name_or_id)
-            self.lrphoto.select_generic('xmp', 'id="%s"' % name_or_id)
+            self.lrphoto.select_generic("xmp", f'id="{name_or_id}"')
         except ValueError:
-            self.lrphoto.select_generic('xmp', 'name="%s"' % name_or_id)
+            self.lrphoto.select_generic("xmp", f'name="{name_or_id}"')
         return self.cursor.fetchall()
 
 
@@ -289,15 +296,16 @@ class LRCatDB():
         '''
         try:
             name_or_id = int(name_or_id)
-            self.cursor.execute('\
-                SELECT %s FROM AgHarvestedExifMetadata \
-                WHERE image = ? ' % fields, (name_or_id, ))
+            self.cursor.execute(
+                f"SELECT {fields} FROM AgHarvestedExifMetadata WHERE image = ? ",
+                (name_or_id,),
+            )
         except ValueError:
-            self.cursor.execute('\
-                SELECT %s  FROM Adobe_images i \
-                JOIN AgHarvestedExifMetadata em on i.id_local = em.image \
-                JOIN AgLibraryFile fi on i.rootFile = fi.id_local \
-                WHERE fi.baseName = ? ' % fields, (name_or_id, ))
+            self.cursor.execute(
+                f"SELECT {fields}  FROM Adobe_images i JOIN AgHarvestedExifMetadata em on i.id_local = em.image "
+                "JOIN AgLibraryFile fi on i.rootFile = fi.id_local WHERE fi.baseName = ? ",
+                (name_or_id,),
+            )
         return self.cursor.fetchall()
 
 

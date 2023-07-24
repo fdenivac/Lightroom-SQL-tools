@@ -26,18 +26,18 @@ def display_keywords(value):
 
 def display_aperture(value):
     ''' format aperture in F value '''
-    return 'F%.1f' % 2**((float(value)/2))
+    return f'F{2**((float(value)/2)):.1f}'
 
 def display_iso(value):
     ''' format iso value '''
-    return '%.0f' % value
+    return f'{value:.0f}'
 
 def display_speed(value):
     ''' format shutter speed value '''
     value = 2**(float(value))
     if value > 1:
-        return '1/%.0f'  % value
-    return '%.0f' % (1/value)
+        return f'1/{value:.0f}'
+    return f'{1/value:.0f}'
 
 def display_date(value):
     ''' format date : remove sub-seconds '''
@@ -107,7 +107,7 @@ def prepare_display_columns(columns, widths):
             width, func = DEFAULT_SPEC
         # chance to change widths from outside
         if num_col < len(widths):
-            width = '%%%ss' % widths[num_col].strip()
+            width = f'%%{widths[num_col].strip()}s'
         column_spec[num_col] = (name, width, func)
     return column_spec
 
@@ -143,11 +143,11 @@ def display_results(rows, columns, **kwargs):
     if wanted_lines == 0 or wanted_lines >= len(rows):
         max_lines = len(rows)
         if  kwargs.get('header', True):
-            print(' * Photo results (%s photos) :' % (len(rows)))
+            print(f' * Photo results ({len(rows)} photos) :')
     else:
         max_lines = wanted_lines
         if  kwargs.get('header', True):
-            print(' * Photo results (first %s photos on %s) :' % (wanted_lines, len(rows)))
+            print(f' * Photo results (first {wanted_lines} photos on {len(rows)}) :')
 
     column_spec = prepare_display_columns(columns, widths)
     # basic check : detect if suffisant column
@@ -161,7 +161,7 @@ def display_results(rows, columns, **kwargs):
         total_width = 0
         line = []
 
-        for num_col in range(0, len(column_spec)):
+        for _, num_col in enumerate(column_spec):
             name, width, _ = column_spec[num_col]
             match = re.search(r'(\d+)s', width)
             if match:

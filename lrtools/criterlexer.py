@@ -60,7 +60,7 @@ class CriterLexer():
                 if _m:
                     value = _m.group(1)
                 else:
-                    self.last_error = 'No value for criterion "%s"' % key
+                    self.last_error = f'No value for criterion "{key}"'
                     return False
             if _m:
                 self.criters = self.criters[_m.end():]
@@ -135,7 +135,8 @@ class CriterLexer():
             #
             # Finally : token error
             #
-            self.last_error = 'Invalid token "%s"' % self.criters.split(' ')[0]
+            self.last_error = f'Invalid token \042{self.criters.split(" ")[0]}\042'
+
             return False
 
         return self.check_syntax()
@@ -149,8 +150,7 @@ class CriterLexer():
         for token, _ in self.tokens:
             allowed_tokens = self.RULES_FOLLOW[prev_token]
             if not token in allowed_tokens:
-                # raise LexerException('"%s" not allowed after "%s"' % (token, prev_token))
-                self.last_error = '"%s" not allowed after "%s"' % (token, prev_token)
+                self.last_error = f'"{token}" not allowed after "{prev_token}"'
                 return False
 
             prev_token = token

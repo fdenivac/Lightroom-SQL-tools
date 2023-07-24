@@ -111,7 +111,7 @@ def main():
     if args.file:
         # option file : all parameters other than "columns" are ignored
         try:
-            uuids = open(args.file).read().splitlines()
+            uuids = open(args.file, encoding='utf-8').read().splitlines()
         except OSError:
             print(' ==> Failed to open file', file=sys.stderr)
             return
@@ -120,7 +120,7 @@ def main():
         rows = []
         for uuid in uuids:
             try:
-                rows.append(lrobj.select_generic(args.columns, 'uuid="%s"' % uuid).fetchone())
+                rows.append(lrobj.select_generic(args.columns, f'uuid="{uuid}"').fetchone())
             except LRSelectException as _e:
                 print(' ==> FAILED:', _e, file=sys.stderr)
                 return

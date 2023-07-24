@@ -94,25 +94,29 @@ class SQLSmartColl():
         ''' criteria aspectRatio '''
         what = {'square' : ('=', '!='), 'portrait' : ('<', '>='), 'landscape' : ('>', '<=')}
         if self.func['value'] not in what:
-            raise SmartException('value unsupported: %s' %  self.func['value'])
+            raise SmartException(f'value unsupported: {self.func["value"]}')
         if self.func['operation'] not in ('==', '!='):
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
         oper_eq, oper_neq = what[self.func['value']]
         oper = oper_eq if self.func['operation'] == '==' else oper_neq
-        self.sql += self._complete_sql('', 'WHERE i.aspectRatioCache %s 1' % oper)
+        self.sql += self._complete_sql('', f'WHERE i.aspectRatioCache {oper} 1')
 
 
     def criteria_widthCropped(self):
         ''' criteria widthCropped '''
         if self.func['operation'] == 'in':
-            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
-                                'WHERE  i.fileFormat <> "VIDEO" AND '\
-                                'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) >= %s AND '\
-                                'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) <= %s' %  (self.func['value'], self.func['value2']))
+            _sql = self._complete_sql(
+                "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local",
+                'WHERE  i.fileFormat <> "VIDEO" AND '
+                f'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) >= {self.func["value"]} AND '
+                f'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) <= {self.func["value2"]}',
+            )
         else:
-            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
-                                'WHERE  i.fileFormat <> "VIDEO" AND '\
-                                'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) %s %s' %  (self.func['operation'], self.func['value']))
+            _sql = self._complete_sql(
+                "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local",
+                'WHERE  i.fileFormat <> "VIDEO" AND '
+                f'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) {self.func["operation"]} {self.func["value"]}',
+            )
         _parts = _sql.split(' FROM ')
         _parts[0] += self._SELECT_DIMS
         self.sql += ' FROM '.join(_parts)
@@ -120,15 +124,19 @@ class SQLSmartColl():
 
     def criteria_heightCropped(self):
         ''' criteria heightCropped '''
-        if self.func['operation'] == 'in':
-            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
-                                'WHERE  i.fileFormat <> "VIDEO" AND '\
-                                'CAST(substr(dims, instr(dims, "x")+1) AS int) >= %s AND '\
-                                'CAST(substr(dims, instr(dims, "x")+1) AS int) <= %s' %  (self.func['value'], self.func['value2']))
+        if self.func["operation"] == "in":
+            _sql = self._complete_sql(
+                "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local",
+                'WHERE  i.fileFormat <> "VIDEO" AND '
+                f'CAST(substr(dims, instr(dims, "x")+1) AS int) >= {self.func["value"]} AND '
+                f'CAST(substr(dims, instr(dims, "x")+1) AS int) <= {self.func["value2"]}',
+            )
         else:
-            _sql = self._complete_sql('LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local',\
-                                'WHERE  i.fileFormat <> "VIDEO" AND '\
-                                'CAST(substr(dims, instr(dims, "x")+1) AS int) %s %s' %  (self.func['operation'], self.func['value']))
+            _sql = self._complete_sql(
+                "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local",
+                'WHERE  i.fileFormat <> "VIDEO" AND '
+                f'CAST(substr(dims, instr(dims, "x")+1) AS int) {self.func["operation"]} {self.func["value"]}',
+            )
         _parts = _sql.split(' FROM ')
         _parts[0] += self._SELECT_DIMS
         self.sql += ' FROM '.join(_parts)
@@ -139,13 +147,13 @@ class SQLSmartColl():
         if self.func['operation'] == 'in':
             # shift of 24 h for end of day :
             endtime = (datetime.strptime(self.func['value2'], '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
-            self.sql += self._complete_sql('', 'WHERE i.captureTime >= "%s" AND  i.captureTime < "%s"' % (self.func['value'], endtime))
-        elif self.func['operation'] == 'inLast':
-            self.sql += self._complete_sql('', 'WHERE i.captureTime >= date("now", "-%s %s")' % (self.func['value'], self.func['_units']))
-        elif self.func['operation'] in ['==', '!=', '>', '<']:
-            self.sql += self._complete_sql('', ' WHERE i.captureTime %s "%s"' % (self.func['operation'], self.func['value']))
+            self.sql += self._complete_sql('', f'WHERE i.captureTime >= "{self.func["value"]}" AND  i.captureTime < "{endtime}"')
+        elif self.func["operation"] == "inLast":
+            self.sql += self._complete_sql("", f'WHERE i.captureTime >= date("now", "-{self.func["value"]} {self.func["_units"]}")')
+        elif self.func["operation"] in ["==", "!=", ">", "<"]:
+            self.sql += self._complete_sql("", f' WHERE i.captureTime {self.func["operation"]} "{self.func["value"]}"')
         else:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
 
 
     def criteria_touchTime(self):
@@ -154,15 +162,15 @@ class SQLSmartColl():
         touchtime1 = date_to_lrstamp(self.func['value']) + (24 * 3600)
         touchtime2 = date_to_lrstamp(self.func['value2']) + (24 * 3600)
         if self.func['operation'] == 'in':
-            self.sql += self._complete_sql('', ' WHERE i.touchTime >= %s AND  i.touchTime <= %s' % (touchtime1, touchtime2))
+            self.sql += self._complete_sql('', f" WHERE i.touchTime >= {touchtime1} AND  i.touchTime <= {touchtime2}")
         elif self.func['operation'] == 'inLast':
-            self.sql += self._complete_sql('', ' WHERE i.touchTime >= date("now", "-%s %s")' % (self.func['value'], self.func['_units']))
+            self.sql += self._complete_sql('', f' WHERE i.touchTime >= date("now", "-{self.func["value"]} {self.func["_units"]}")')
         elif self.func['operation'] == '<':
-            self.sql += self._complete_sql('', ' WHERE i.touchTime < %s AND  i.touchTime > 0' % (touchtime1))
+            self.sql += self._complete_sql('', f" WHERE i.touchTime < {touchtime1} AND  i.touchTime > 0")
         elif self.func['operation'] in ['==', '!=', '>']:
-            self.sql += self._complete_sql('', ' WHERE i.touchTime %s %s' % (self.func['operation'], touchtime1))
+            self.sql += self._complete_sql('', f' WHERE i.touchTime {self.func["operation"]} {touchtime1}')
         else:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
 
 
     def criteria_filename(self):
@@ -172,7 +180,7 @@ class SQLSmartColl():
 
     def criteria_fileFormat(self):
         ''' criteria file format (dng, video...). Operation "==" or "!=" '''
-        self.sql += self._complete_sql('', ' WHERE i.fileFormat %s "%s"' % (self.func['operation'], self.func['value']))
+        self.sql += self._complete_sql('', f' WHERE i.fileFormat {self.func["operation"]} "{self.func["value"]}"')
 
 
     def criteria_collection(self):
@@ -183,16 +191,20 @@ class SQLSmartColl():
             values = self.func['value'].split()
             self.build_all_values_with_join(' LEFT JOIN AgLibraryCollectionimage ci%s ON ci%s.image = i.id_local'\
                                             ' LEFT JOIN AgLibraryCollection col%s ON col%s.id_local = ci%s.Collection ', \
-                                            ' col%s.name ' +  'LIKE %s' % (what[self.func['operation']]), values)
+                                            ' col%s.name ' +  f'LIKE {what[self.func["operation"]]}', values)
         elif self.func['operation'] == 'noneOf':
             idscoll = list()
             for coll in self.func['value'].split():
-                idscoll += [id for id, in lrcollection.select_generic('id', 'name="%%%s%%"' % coll).fetchall()]
+                idscoll += [id for id, in lrcollection.select_generic('id', f'name="%%{coll}%%"').fetchall()]
             idscoll = ','.join([str(id) for id in idscoll])
-            self.sql += self.base_sql + ' EXCEPT '+ self.base_sql + \
-                ' LEFT JOIN  AgLibraryCollectionimage ci ON ci.image = i.id_local WHERE ci.collection IN (%s)' % idscoll
+            self.sql += (
+                self.base_sql
+                + " EXCEPT "
+                + self.base_sql
+                + f" LEFT JOIN  AgLibraryCollectionimage ci ON ci.image = i.id_local WHERE ci.collection IN ({idscoll})"
+            )
         else:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
 
 
 
@@ -206,7 +218,7 @@ class SQLSmartColl():
             for keyword in self.func['value'].split():
                 indexes += lrk.hierachical_indexes(keyword, self.func['operation'])
             indexes = ','.join([str(index) for index in indexes])
-            self.sql += _base_sql + ' EXCEPT '+ _base_sql + ' WHERE kw1.id_local IN (%s)' % indexes
+            self.sql += _base_sql + ' EXCEPT '+ _base_sql + f' WHERE kw1.id_local IN ({indexes})'
 
         elif self.func['operation'] == 'any':
             lrk = LRKeywords(self.lrdb)
@@ -214,7 +226,7 @@ class SQLSmartColl():
             for keyword in self.func['value'].split():
                 indexes += lrk.hierachical_indexes(keyword, self.func['operation'])
             indexes = ','.join([str(index) for index in indexes])
-            self.sql += _base_sql  + ' WHERE kw1.id_local IN (%s)' % indexes
+            self.sql += _base_sql  + f' WHERE kw1.id_local IN ({indexes})'
 
         elif self.func['operation']  in ['all', 'words', 'beginsWith', 'endsWith']:
             lrk = LRKeywords(self.lrdb)
@@ -233,7 +245,7 @@ class SQLSmartColl():
             _sql = self.lrdb.lrphoto.select_generic(self.base_select, '', sql=True)
             self.sql += _sql + '  WHERE  i.id_local IN (SELECT DISTINCT kwi.image FROM AgLibraryKeywordImage kwi) '
         else:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
 
 
     def criteria_labelColor(self):
@@ -241,7 +253,7 @@ class SQLSmartColl():
         value = self.func['value']
         if value == 'none':
             value = ''
-        self.sql += self._complete_sql('', ' WHERE i.colorLabels %s "%s"' % (self.func['operation'], value))
+        self.sql += self._complete_sql('', f' WHERE i.colorLabels {self.func["operation"]} "{value}"')
 
     def criteria_labelText(self):
         ''' criteria label Text, same as  criteria color label '''
@@ -250,15 +262,15 @@ class SQLSmartColl():
 
     def criteria_colorMode(self):
         ''' criteria color mode '''
-        self.sql += self._complete_sql('', ' WHERE i.colorMode %s %s' % (self.func['operation'], self.func['value']))
+        self.sql += self._complete_sql('', f' WHERE i.colorMode {self.func["operation"]} {self.func["value"]}')
 
 
     def criteria_treatment(self):
         ''' criteria treatment '''
         if self.func['value'] == 'grayscale':
-            self.sql += self._complete_sql('LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local', 'WHERE ids.grayscale %s 1.0' % (self.func['operation']))
+            self.sql += self._complete_sql('LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local', f'WHERE ids.grayscale {self.func["operation"]} 1.0')
         else:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
 
 
     def criteria_hasAdjustments(self):
@@ -270,7 +282,7 @@ class SQLSmartColl():
             oper = '!= 1'
         else:
             oper = '= 1'
-        self.sql += self._complete_sql('LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local', 'WHERE hasDevelopAdjustmentsEx %s' % oper)
+        self.sql += self._complete_sql('LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local', f'WHERE hasDevelopAdjustmentsEx {oper}')
 
 
     def criteria_rating(self):
@@ -279,10 +291,10 @@ class SQLSmartColl():
         if self.func['operation'].startswith('<') or (self.func['operation'].startswith('=') and self.func['value'] == '0'):
             _sql += 'i.rating is NULL OR '
         if self.func['operation'] in ['==', '!=', '>', '<', '>=', '<=']:
-            _sql += 'i.rating %s %s' % (self.func['operation'], self.func['value'])
+            _sql += f'i.rating {self.func["operation"]} {self.func["value"]}'
             self.sql += self._complete_sql('', _sql)
         else:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
 
 
     def criteria_camera(self):
@@ -379,7 +391,7 @@ class SQLSmartColl():
             'all': (' AND '),\
         }
         if self.func['operation'] not in rules:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
         combine = rules[self.func['operation']]
         lrk = LRKeywords(self.lrdb)
         wheres = [' WHERE ']
@@ -404,12 +416,12 @@ class SQLSmartColl():
                         ' OR fi.lc_idx_filename LIKE "%%s%" '\
                         ' OR fo.pathFromRoot LIKE "%%s%"'\
                         ' OR rf.absolutePath LIKE "%%s%"'.replace('%s', str(value)))
-            wheres.append(' OR iic.value LIKE "%%%s%%" ' % value)
-            wheres.append(' OR liptc.caption LIKE "%%%s%%" ' % value)
-            wheres.append(' OR liptc.copyright LIKE "%%%s%%" ' % value)
-            wheres.append(' OR scpc.profileName LIKE "%%%s%%" ' % value)
-            wheres.append(' OR  col%s.name LIKE "%%%s%%"' % (num_value, value))
-            wheres.append(' OR  kw%s.id_local IN (%s)) ' % (num_value, ','.join([str(index) for index in indexes])))
+            wheres.append(f' OR iic.value LIKE "%%{value}%%" ')
+            wheres.append(f' OR liptc.caption LIKE "%%{value}%%" ')
+            wheres.append(f' OR liptc.copyright LIKE "%%{value}%%" ')
+            wheres.append(f' OR scpc.profileName LIKE "%%{value}%%" ')
+            wheres.append(f' OR  col{num_value}.name LIKE "%%{value}%%"')
+            wheres.append(f' OR  kw{num_value}.id_local IN ({",".join([str(index) for index in indexes])})) ')
 
         # the base 'select columns from' :
         self.base_sql_select = self._add_joins_from_select(self.lrdb.lrphoto.select_generic(self.base_select, '', distinct=True, sql=True))
@@ -428,7 +440,7 @@ class SQLSmartColl():
             'all': ('AND'),\
         }
         if self.func['operation'] not in rules:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
         combine = rules[self.func['operation']]
         lrk = LRKeywords(self.lrdb)
         wheres = [' WHERE ']
@@ -440,7 +452,7 @@ class SQLSmartColl():
             if num_value > 0:
                 wheres += [combine]
             wheres.append('(msi.searchIndex LIKE "%%%s%%" '.replace('%s', str(value)))
-            wheres.append(' OR  kw%s.id_local IN (%s)) ' % (num_value, ','.join([str(index) for index in indexes])))
+            wheres.append(f" OR  kw{num_value}.id_local IN ({','.join([str(index) for index in indexes])})) ")
         # the base 'select columns from' :
         self.base_sql_select = self._add_joins_from_select(self.lrdb.lrphoto.select_generic(self.base_select, '', distinct=True, sql=True))
         # final sql
@@ -465,7 +477,7 @@ class SQLSmartColl():
         elif self.func['value'] == 'upToDate':
             where = 'am.externalXmpIsDirty=0 and i.sidecarStatus = 0.0'
         else:
-            raise SmartException('value unsupported: %s on criteria %s' % (self.func['operation'], self.func['value']))
+            raise SmartException(f'value unsupported: {self.func["operation"]} on criteria {self.func["value"]}')
         self.sql += ''.join([self.base_sql_select] +  [' LEFT JOIN '] + [' LEFT JOIN '.join(self.joins)] + [' WHERE '] + [where])
 
 
@@ -494,7 +506,7 @@ class SQLSmartColl():
             '!=': ('"%s"', 'AND', '!='),\
             }
         if not self.func['operation'] in rules:
-            raise SmartException('operation unsupported: %s on criteria %s' % (self.func['operation'], self.func['criteria']))
+            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
         what, combine, test = rules[self.func['operation']]
         _sql = ''
         if self.func['operation'] in ['==', '!=']:
@@ -508,13 +520,13 @@ class SQLSmartColl():
                 _sql += ' AND '
                 value = value[1:]
             elif _sql:
-                _sql += ' %s ' % combine   # "AND" or "OR"
+                _sql += f' {combine} '   # "AND" or "OR"
             modifier = ''
             if value[0] == '!':
                 modifier = 'NOT'
                 value = value[1:]
-            _sql += ' %s %s %s %s' % (where_column, modifier, test, what % value)
-        self.sql += self._complete_sql(tables_join, ' WHERE %s' % _sql)
+            _sql += f' {where_column} {modifier} {test} {what % value}'
+        self.sql += self._complete_sql(tables_join, f' WHERE {_sql}')
 
 
 
@@ -522,12 +534,16 @@ class SQLSmartColl():
         '''
         build SQL for numeric values (==, !=, >, <, >=, <=, in)
         '''
-        if self.func['operation'] == 'in':
-            self.sql += self._complete_sql(tables_join, ' WHERE %s >= %s AND %s <= %s %s' % \
-                                (where_column, self.func['value'], where_column, self.func['value2'], where_complement))
+        if self.func["operation"] == "in":
+            self.sql += self._complete_sql(
+                tables_join,
+                f' WHERE {where_column} >= {self.func["value"]} AND {where_column} <= {self.func["value2"]} {where_complement}',
+            )
         else:
-            self.sql += self._complete_sql(tables_join, 'WHERE %s %s %s %s' % \
-                                (where_column, self.func['operation'], self.func['value'], where_complement))
+            self.sql += self._complete_sql(
+                tables_join,
+                f' WHERE {where_column} {self.func["operation"]} {self.func["value"]} {where_complement}',
+            )
 
 
     def build_boolean_value(self, tables_join, where_column):
@@ -535,7 +551,7 @@ class SQLSmartColl():
         build SQL for boolean values ()
         '''
         value = 1 if self.func['value'] else 0
-        self.sql += self._complete_sql(tables_join, ' WHERE %s == %s' % (where_column, value))
+        self.sql += self._complete_sql(tables_join, f" WHERE {where_column} == {value}")
 
 
 
@@ -623,7 +639,7 @@ class SQLSmartColl():
                 elif self.smart['combine'] == 'intersect':
                     self.sql += ' INTERSECT '
                 else:
-                    raise SmartException('"combine" operation unsupported: %s' %  self.smart['combine'])
+                    raise SmartException(f'"combine" operation unsupported: {self.smart["combine"]}')
 
             self.func = self.smart[fid]
             if self.verbose:
@@ -631,9 +647,9 @@ class SQLSmartColl():
 
             # build criteria function name ...
             try:
-                func_criteria = getattr(self, 'criteria_%s' % self.func['criteria'])
-            except AttributeError:
-                raise SmartException('criteria unsupported: %s' % self.func['criteria'])
+                func_criteria = getattr(self, f'criteria_{self.func["criteria"]}')
+            except AttributeError as _e:
+                raise SmartException(f'criteria unsupported: {self.func["criteria"]}') from _e
             # ... and call it
             func_criteria()
 
@@ -648,7 +664,7 @@ class SQLSmartColl():
         ''' convert smart collection to string '''
         smart_str = ''
         for _k, _v in list(self.smart.items()):
-            smart_str += '%s = %s\n' % (_k, _v)
+            smart_str += f"{_k} = {_v}\n"
         return smart_str
 
 
@@ -661,7 +677,7 @@ def select_smart(lrdb, smart_name, columns, is_file=False):
     return rows
     '''
     if is_file:
-        smart = open(smart_name, 'r').read()
+        smart = open(smart_name, 'r', encoding='utf-8').read()
         smart = smart[smart.find('{'):]
         # smart = smart[4:]
         lua = SLPP()
@@ -672,7 +688,7 @@ def select_smart(lrdb, smart_name, columns, is_file=False):
             smart_title = smart['title']
         else:
             smart_title = smart_name
-        print(' * Collection name : "%s"' % (smart_title))
+        print(f' * Collection name : "{smart_title}"')
         smart = smart['value']
 
     else:
