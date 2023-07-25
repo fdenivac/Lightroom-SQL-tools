@@ -224,18 +224,18 @@ class LRCatDB():
             date_end = datetime.now()
         if mode == "by_day":
             sql = (
-                'SELECT strftime("%%Y-%%m-%%d", DATE(captureTime, "start of day")) as day, COUNT(captureTime) AS count'
+                'SELECT strftime("%Y-%m-%d", DATE(captureTime, "start of day")) as day, COUNT(captureTime) AS count'
                 f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime < "{date_end}" GROUP BY DATE(captureTime, "start of day")'
             )
         elif mode == "by_month":
             sql = (
-                'SELECT strftime("%%Y-%%m", DATE(captureTime, "start of month")) as month, COUNT(captureTime) AS count'
+                'SELECT strftime("%Y-%m", DATE(captureTime, "start of month")) as month, COUNT(captureTime) AS count'
                 f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime < "{date_end}" GROUP BY DATE(captureTime, "start of month")'
             )
         elif mode == "by_year":
             sql = (
-                'SELECT strftime("%%Y", DATE(captureTime, "start of year")) as year, COUNT(captureTime) AS count'
-                f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime <= "{date_start}" GROUP BY DATE(captureTime, "start of year")'
+                'SELECT strftime("%Y", DATE(captureTime, "start of year")) as year, COUNT(captureTime) AS count'
+                f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime <= "{date_end}" GROUP BY DATE(captureTime, "start of year")'
             )
         else:
             print("BUG")
