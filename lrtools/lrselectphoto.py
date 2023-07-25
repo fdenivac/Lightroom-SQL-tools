@@ -394,7 +394,7 @@ class LRSelectPhoto(LRSelectGeneric):
             action = (' OR ', '|')
         else:
             action = (' ', '__')
-        return action[0].join([f'msi.exifSearchIndex LIKE "%%/t{val}/t%%"' for val in value.split(action[1])])
+        return action[0].join([f'msi.exifSearchIndex LIKE "%/t{val}/t%"' for val in value.split(action[1])])
 
     def func_titleindex(self, value):
         '''  specific value for title : in otherSearchIndex column '''
@@ -404,7 +404,7 @@ class LRSelectPhoto(LRSelectGeneric):
             action = (' OR ', '|')
         else:
             action = (' ', '__')
-        return action[0].join([ f'msi.otherSearchIndex LIKE "%%/t{val}/t%%"' for val in value.split(action[1])])
+        return action[0].join([ f'msi.otherSearchIndex LIKE "%/t{val}/t%"' for val in value.split(action[1])])
 
     def func_aperture(self, value):
         '''

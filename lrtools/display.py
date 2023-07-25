@@ -107,7 +107,7 @@ def prepare_display_columns(columns, widths):
             width, func = DEFAULT_SPEC
         # chance to change widths from outside
         if num_col < len(widths):
-            width = f'%%{widths[num_col].strip()}s'
+            width = f'%{widths[num_col].strip()}s'
         column_spec[num_col] = (name, width, func)
     return column_spec
 

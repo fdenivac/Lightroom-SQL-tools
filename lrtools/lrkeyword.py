@@ -27,8 +27,8 @@ class LRKeywords():
         Initialize and build  hierarchical keywords
         '''
         self.lrdb.cursor.execute('SELECT id_local, name, parent FROM AgLibraryKeyword')
-        self.tree = dict()
-        self.id2keyname = dict()
+        self.tree = {}
+        self.id2keyname = {}
         for pid, name, parent in self.lrdb.cursor.fetchall():
             if not name:
                 name = ''
@@ -37,7 +37,7 @@ class LRKeywords():
                 self.rootid = pid
                 parent = ''
             if parent not in self.tree:
-                self.tree[parent] = list()
+                self.tree[parent] = []
             self.tree[parent].append(pid)
 
         # creation dictionnaire index clé vers nom hierachique
@@ -78,7 +78,7 @@ class LRKeywords():
                 hkeys[k] = f"{hname_next}{self.id2keyname[k]}"
         if not self.tree:
             self._init_hierarchical_keywords()
-        hkeywords = dict()
+        hkeywords = {}
         _build(self.rootid, '', hkeywords)
         return hkeywords
 
@@ -121,8 +121,8 @@ class LRKeywords():
         Return :
             list_hierarchical_keywords , list_keywords
         '''
-        keynames = list()
-        hkeynames = list()
+        keynames = []
+        hkeynames = []
         if include_persons:
             self.lrdb.cursor.execute(f'SELECT tag FROM AgLibraryKeywordImage WHERE image={idphoto}')
             for idkey, in self.lrdb.cursor.fetchall():
@@ -149,7 +149,7 @@ class LRKeywords():
             * all, any, noneOf : find all occurences of key_part in keywords
         '''
         key_part = key_part.lower()
-        key = f'"%%{key_part}%%"'
+        key = f'"%{key_part}%"'
 
         def find_sub_indexes(index, indexes):
             self.lrdb.cursor.execute(f'SELECT id_local FROM AgLibraryKeyword WHERE parent = {index}')

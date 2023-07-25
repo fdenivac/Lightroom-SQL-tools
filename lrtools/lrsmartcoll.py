@@ -195,7 +195,7 @@ class SQLSmartColl():
         elif self.func['operation'] == 'noneOf':
             idscoll = list()
             for coll in self.func['value'].split():
-                idscoll += [id for id, in lrcollection.select_generic('id', f'name="%%{coll}%%"').fetchall()]
+                idscoll += [id for id, in lrcollection.select_generic('id', f'name="%{coll}%"').fetchall()]
             idscoll = ','.join([str(id) for id in idscoll])
             self.sql += (
                 self.base_sql
@@ -416,11 +416,11 @@ class SQLSmartColl():
                         ' OR fi.lc_idx_filename LIKE "%%s%" '\
                         ' OR fo.pathFromRoot LIKE "%%s%"'\
                         ' OR rf.absolutePath LIKE "%%s%"'.replace('%s', str(value)))
-            wheres.append(f' OR iic.value LIKE "%%{value}%%" ')
-            wheres.append(f' OR liptc.caption LIKE "%%{value}%%" ')
-            wheres.append(f' OR liptc.copyright LIKE "%%{value}%%" ')
-            wheres.append(f' OR scpc.profileName LIKE "%%{value}%%" ')
-            wheres.append(f' OR  col{num_value}.name LIKE "%%{value}%%"')
+            wheres.append(f' OR iic.value LIKE "%{value}%" ')
+            wheres.append(f' OR liptc.caption LIKE "%{value}%" ')
+            wheres.append(f' OR liptc.copyright LIKE "%{value}%" ')
+            wheres.append(f' OR scpc.profileName LIKE "%{value}%" ')
+            wheres.append(f' OR  col{num_value}.name LIKE "%{value}%"')
             wheres.append(f' OR  kw{num_value}.id_local IN ({",".join([str(index) for index in indexes])})) ')
 
         # the base 'select columns from' :
