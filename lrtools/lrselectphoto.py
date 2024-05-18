@@ -162,6 +162,10 @@ class LRSelectPhoto(LRSelectGeneric):
             'pubtime' : { \
                 'True' : [ '(select substr(rm.url, pos+1) from (select instr(rm.url, "/") as pos)) AS pubtime', \
                         ['LEFT JOIN AgRemotePhoto rm on i.id_local = rm.photo'] ] }, \
+            'pubposition': { \
+                'True' : ['pci.positionInCollection AS pubposition', ['LEFT JOIN AgLibraryPublishedCollectionImage pci ON pci.image = i.id_local',
+                     'LEFT JOIN AgLibraryPublishedCollection pc ON pc.id_local = pci.collection', ]], \
+                },\
             'extfile' : { \
                 'True' :  \
                     [   'fi.sidecarExtensions AS extfile', None  ] \
@@ -616,6 +620,7 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'pubname'    : remote path and name of published photo
             - 'pubcollection' : name of publish collection
             - 'pubtime'    : published datetime in seconds from 2001-1-1
+            - 'pubposition': order number (float) in collection
         criterias :
             - 'name'       : (str) filename without extension
             - 'exactname'  : (str) filename insensitive without extension
