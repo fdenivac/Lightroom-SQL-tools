@@ -517,7 +517,7 @@ class LRSelectPhoto(LRSelectGeneric):
         '''
         if value == 'True':
             return 'i.id_local = pci.image'
-        return f'(i.id_local = pci.image AND pc.name = "{value}" COLLATE NOCASE)'
+        return f'(i.id_local = pci.image AND pc.name LIKE "{value}" COLLATE NOCASE)'
 
     def func_pubtime(self, value):
         '''
@@ -525,7 +525,7 @@ class LRSelectPhoto(LRSelectGeneric):
         '''
         if value == 'True':
             return 'i.id_local = pci.image'
-        return f'(i.id_local = pci.image AND pc.name = "{value}" COLLATE NOCASE)'
+        return f'(i.id_local = pci.image AND pc.name LIKE "{value}" COLLATE NOCASE)'
 
     def func_rating(self, value):
         '''
