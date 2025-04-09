@@ -93,7 +93,7 @@ class LRSelectGeneric():
 
         * params criteria :  dictionnary where :
           structure :
-            criter_name : [ SQL_JOIN_TABLES, SQL_WHERES, parse_value_funtion ]
+            criter_name : [ SQL_JOIN_TABLES, SQL_WHERES, parser_value_function ]
             ...
             example :
             'collection' : [
@@ -107,11 +107,12 @@ class LRSelectGeneric():
         self.criteria_description = criteria
         self.groupby = ''
         self.sql_column_names = []
+        self.raw_column_names = []
 
 
     def selected_column_names(self):
         ''' column names from SQL statement executed '''
-        return self.sql_column_names
+        return self.raw_column_names
 
 
     #
@@ -300,8 +301,13 @@ class LRSelectGeneric():
                 raise LRSelectException(f'invalid column key "{key}"') from _e
 
         # ENTRY columns_to_sql(self, ...)
+        self.raw_column_names = []
         for keyval in self._keyval_to_keys(columns):
             key, value = list(keyval.items())[0]
+            if key == "name":
+                self.raw_column_names.append(f"{key}={value}")
+            else:
+                self.raw_column_names.append(f"{key}")
             match = re.match(r'count\(([\w=]+)\)', key)
             if match:
                 _column_to_sql({match.group(1):value}, 'count')

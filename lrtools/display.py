@@ -7,10 +7,30 @@ SQL results display functions
 
 """
 
+import sys
+import os
 import re
 from datetime import datetime, timedelta
 import pytz
+
 from . import localzone
+
+
+
+def smart_unit(value, unit):
+    """convert number in smart form : KB, MB, GB, TB"""
+    if value is None:
+        return f"- K{unit}"
+    if isinstance(value, str):
+        value = int(value)
+    if value > 1000 * 1000 * 1000 * 1000:
+        return f"{(value / (1000 * 1000 * 1000 * 1000.0)):.2f} T{unit}"
+    if value > 1000 * 1000 * 1000:
+        return f"{(value / (1000 * 1000 * 1000.0)):.2f} G{unit}"
+    if value > 1000 * 1000:
+        return f"{(value / (1000 * 1000.0)):.2f} M{unit}"
+    if value > 1000:
+        return f"{(value / (1000.0)):.2f} K{unit}"
 
 
 #
@@ -22,7 +42,6 @@ def display_keywords(value):
     if value is None:
         value = ''
     return value
-
 
 def display_aperture(value):
     ''' format aperture in F value '''
@@ -56,7 +75,7 @@ def display_lrtimestamp(value):
 DEFAULT_SPEC = ('%6s', None)
 DEFAULT_SPECS = {
     'name'      : ('%-20s', None),
-    'name=full' : ('%-60s', None),
+    'name=full' : ('%-80s', None),
     'name=base' : ('%-20s', None),
     'name=basext' : ('%-25s', None),
     'id'        : ('%8s', None),
@@ -86,6 +105,7 @@ DEFAULT_SPECS = {
     'pubtime'   : ('%19s', display_lrtimestamp),
     'latitude'  : ('%-18s', None),
     'longitude' : ('%-18s', None),
+    'filesize'  : ('%8s', None),            # pseudo column
 }
 DEFAULT_SEPARATOR = ' | '
 
@@ -115,8 +135,8 @@ def prepare_display_columns(columns, widths):
 def display_results(rows, columns, **kwargs):
     '''
     Display SQL results
-    - rows : SQL colummns to print
-    - columns : column names string selected
+    - rows : SQL colummns
+    - columns : column names to display ("filesize" column can be specified for compute filesize )
     - kwargs :
        * max_lines : max lines to display
        * header : display header (columns names)
@@ -124,6 +144,7 @@ def display_results(rows, columns, **kwargs):
        * widths : widths of columns
        * separator : characters separator between columns
        * raw_print : print raw value (for columns aperture, shutter speed, ido, dates)
+       * filesize : compute and add column filesize
     '''
     if not rows:
         if kwargs.get('header', True):
@@ -139,8 +160,10 @@ def display_results(rows, columns, **kwargs):
         widths = [a.strip() for a in widths.split(',')]
     indent = kwargs.get('indent', 4)
     separator = kwargs.get('separator', DEFAULT_SEPARATOR)
-    wanted_lines = kwargs.get('max_lines', 0)
-    if wanted_lines == 0 or wanted_lines >= len(rows):
+    wanted_lines = kwargs.get('max_lines', sys.maxsize)
+    if wanted_lines < 0:
+        wanted_lines = sys.maxsize
+    if wanted_lines >= len(rows):
         max_lines = len(rows)
         if  kwargs.get('header', True):
             print(f' * Photo results ({len(rows)} photos) :')
@@ -150,6 +173,7 @@ def display_results(rows, columns, **kwargs):
             print(f' * Photo results (first {wanted_lines} photos on {len(rows)}) :')
 
     column_spec = prepare_display_columns(columns, widths)
+
     # basic check : detect if suffisant column
     for i in range(len(rows[0])):
         if i < len(column_spec):
@@ -175,11 +199,28 @@ def display_results(rows, columns, **kwargs):
         print(indent * ' ', (total_width + (len(column_spec) - 1) * len(separator)) * '=', sep='')
 
     # display datas
+    total_filesize = 0
+    if  kwargs.get('filesize', True):
+        # compute columns index
+        columns_lr = list(columns)
+        columns_lr.remove('filesize')
+        id_fname = columns_lr.index('name=full')
+        id_filesize = columns.index('filesize')
     for num in range(0, max_lines):
         if num == len(rows):
             break
         line = []
-        for num_col, value in enumerate(rows[num]):
+        row = rows[num]
+        if  kwargs.get('filesize', True):
+            fname = row[id_fname]
+            try:
+                size = os.path.getsize(fname)
+                total_filesize += size
+            except OSError:
+                size = 0
+            row = list(row)
+            row.insert(id_filesize, size)
+        for num_col, value in enumerate(row):
             try:
                 _, width, func_format = column_spec[num_col]
             except KeyError:
@@ -192,4 +233,15 @@ def display_results(rows, columns, **kwargs):
                     value = func_format(value)
             line.append(width % value)
         print(indent * ' ', separator.join(line), sep='')
-    print()
+
+    # datas displayed, but maybe still filesize to compute
+    if  kwargs.get('filesize', True):
+        for num in range(max_lines, len(rows)):
+            row = rows[num]
+            fname = row[id_fname]
+            try:
+                size = os.path.getsize(fname)
+                total_filesize += size
+            except OSError:
+                pass
+        print(f' * Total filesize : {smart_unit(total_filesize, "B")} ({total_filesize} bytes)')

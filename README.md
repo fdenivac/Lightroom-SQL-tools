@@ -116,9 +116,9 @@ It build SQL SELECT request from 2 strings describing informations to display, a
 
 ### Complete Help :
 
-    usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-n MAX_LINES] [-f FILE]
-                    [-t {photo,collection}] [-N] [--raw_print]
-                    [--log LOG]
+    usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-z] [-n MAX_LINES] [-f FILE]
+                    [-t {photo,collection}] [-N] [-w WIDTHS] [-S SEPARATOR] [-I INDENT]
+                    [--raw-print] [--log LOG]
                     [columns] [criteria]
 
     Select elements from SQL table from Lightroom catalog.
@@ -158,6 +158,7 @@ It build SQL SELECT request from 2 strings describing informations to display, a
             - 'pubname'    : remote path and name of published photo
             - 'pubcollection' : name of publish collection
             - 'pubtime'    : published datetime in seconds from 2001-1-1
+            - 'filesize'   : compute and display files size
         criterias :
             - 'name'       : (str) filename without extension
             - 'exactname'  : (str) filename insensitive without extension
@@ -227,25 +228,39 @@ It build SQL SELECT request from 2 strings describing informations to display, a
                 - 'id4smart  ': (int) id smart collection. To be used with column "smart"
                 - 'name4smart': (str) name of smart collection. To be used with column "smart"
 
+    File sizes can be computed/displayed via the pseudo column "filesize", or option "--filesize".
+
+    Examples:
+            lrselect.py --sql --results "basename,datecapt" "rating=>4,video=0"
+            lrselect.py  "name,datecapt,latitude,longitude,keywords" "rating=>4,videos=0" --results --count
+            lrselect.py  "datecapt,filesize" "rating=>4,videos=0" --results
 
     positional arguments:
     columns               Columns to display
     criteria              Criteria of select
 
-    optional arguments:
+    options:
     -h, --help            show this help message and exit
     -b LRCAT, --lrcat LRCAT
-                            Ligthroom catalog file for database request (default:"I:\Lightroom\La Totale\La Totale.lrcat")
+                            Ligthroom catalog file for database request (default:"C:\Lightroom\La Totale\La Totale.lrcat"), or INI file (lrtools.ini form)
     -s, --sql             Display SQL request
     -c, --count           Display count of results
     -r, --results         Display datas results
-    -n MAX_LINES, --max_lines MAX_LINES
-                            Max number of results to display
-    -f FILE, --file FILE  UUIDs photos file : replace the criteria parameter which is ignored. All parameters are ignored
+    -z, --filesize        Compute and display files size selection. Alternative: add a column "filesize"
+    -n MAX_LINES, --max-lines MAX_LINES
+                            Max number of results to display (-1 means all results)
+    -f FILE, --file FILE  UUIDs photos file : replace the criteria parameter which is ignored
     -t {photo,collection}, --table {photo,collection}
                             table to work on : photo or collection
-    -N, --no_header       don't print header (columns names)
-    --raw_print           print raw value (for speed, aperture columns)
+    -N, --no-header       don't print header (photos count ans columns names)
+    -w WIDTHS, --widths WIDTHS
+                            Widths of columns to display widths (ex:30,-50,10)
+    -S SEPARATOR, --separator SEPARATOR
+                            separator string between columns (default:" | ")
+    -I INDENT, --indent INDENT
+                            space indentation in output (default:"4")
+    --raw-print           print raw value (for speed, aperture columns)
+    --log LOG             log on file
 
 
 

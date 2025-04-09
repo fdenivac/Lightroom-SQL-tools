@@ -31,6 +31,12 @@ class LRSelectPhoto(LRSelectGeneric):
             #
             # Column description
             #
+            #   This is dictionnary of column name.
+            #       Each column name is a dictionnary of possible values :
+            #           Each value describe :
+            #               - the SQL column selection,
+            #               - the list of SQL tables to join,
+            #
             { \
             'all' :  {
                 'True' : [ '*',  None ] }, \
@@ -176,10 +182,14 @@ class LRSelectPhoto(LRSelectGeneric):
             #
             # Criteria description
             #
+            #   dictionnary of criterion. Each criterion contains :
+            #       - SQL tables to join
+            #       - SQL where conditions
+            #       - optional function for parsing value
             { \
                 'name' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local', \
-                    ' UPPER(fi.baseName || COALESCE(i.copyName, "")) LIKE "%s"', \
+                    'UPPER(fi.baseName || COALESCE(i.copyName, "")) LIKE "%s"', \
                     ],
                 'exactname' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local', \
@@ -187,7 +197,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'ext' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
-                    ' UPPER(fi.extension) LIKE "%s"', \
+                    'UPPER(fi.extension) LIKE "%s"', \
                     ],
                 'exact_ext' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
@@ -211,7 +221,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'modcount' : [ \
                     '', \
-                    'i.touchcount %s', \
+                    'i.touchcount = %s', \
                     ],
                 'videos' : [ \
                     '', \
@@ -354,7 +364,8 @@ class LRSelectPhoto(LRSelectGeneric):
                 'groupby' : [ \
                     '', \
                     'GROUP BY %s', \
-                    ],               }
+                    ],
+            }
         )
 
 
@@ -639,6 +650,8 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
             - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
             - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
+            - 'camera'     : (str) camera name (ex:"camera=canon%")
+            - 'lens'       : (str) lens name (ex:"lens=%300%")
             - 'width'      : (int) cropped image width. Need to include column "dims"
             - 'height      : (int) cropped image height. Need to include column "dims"
             - 'aspectratio': (float) aspect ratio (width/height)
@@ -671,7 +684,7 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'pubcollection: (str) publish collection name
             - 'pubtime     : (str) publish time,  operator (<,<=,>, >=)
             - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
-            - 'sort'       : sql sort string
+            - 'sort'       : (int|str) sort result: column index (one based) or column name 
             - 'distinct'   : suppress similar lines of results
         kwargs :
             - distinct : request SELECT DISTINCT
