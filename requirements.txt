@@ -1,5 +1,5 @@
 geopy==2.3.0
 python_dateutil==2.8.2
 pytz==2023.3
-Requests==2.31.0
+Requests==2.32.0
 tzlocal==5.0.1
