@@ -200,7 +200,7 @@ def display_results(rows, columns, **kwargs):
 
     # display datas
     total_filesize = 0
-    if  kwargs.get('filesize', True):
+    if  kwargs.get('filesize', False):
         # compute columns index
         columns_lr = list(columns)
         columns_lr.remove('filesize')
@@ -211,7 +211,7 @@ def display_results(rows, columns, **kwargs):
             break
         line = []
         row = rows[num]
-        if  kwargs.get('filesize', True):
+        if  kwargs.get('filesize', False):
             fname = row[id_fname]
             try:
                 size = os.path.getsize(fname)
@@ -235,7 +235,7 @@ def display_results(rows, columns, **kwargs):
         print(indent * ' ', separator.join(line), sep='')
 
     # datas displayed, but maybe still filesize to compute
-    if  kwargs.get('filesize', True):
+    if  kwargs.get('filesize', False):
         for num in range(max_lines, len(rows)):
             row = rows[num]
             fname = row[id_fname]
