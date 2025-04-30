@@ -1,29 +1,32 @@
 # Lightroom-SQL-tools
-Python library and scripts to retrieve and displays photos informations from lightroom catalog
+Python library and scripts to retrieve and displays photos data from an Adobe Lightroom catalog
 
-* Execute SQL requests outside of Lightroom
-* Catalog opened in read only, so scripts can be executed when Lightroom is running.
+* Execute SQL queries outside of Lightroom
+* The catalog is opened in read-only mode, so scripts can be executed while Lightroom is still running.
 * 2 scripts available : **lrselect** for generic selection based on various criteria, and **lrsmart** for executing smart collections
-* Options for display sql request, result count, results
+* Helper functions for displaying sql queries, result counts, and full results
 
 
 ## Tested environment
-* OS windows 10 64 bits
-* Lightroom 6.x, Classic CC
-* Python >= 3.7
-* Scripts running under windows console or cygwin
+* OS: Windows 10 (64 bit)
+* Lightroom: 6.x, Classic CC
+* Python" >= 3.7
+* Terminals: Windows console or cygwin
 
 
 ## Installation
 * run "``pip install git+https://github.com/fdenivac/Lightroom-SQL-tools``"
-<br>or<br>
-* download *[zip file project ](https://github.com/fdenivac/Lightroom-SQL-tools/archive/master.zip)*
-* extract zip file and execute in main directory "``python setup.py install``"
+  
+<br>OR<br>
 
-Scripts (``lrselect.py`` and ``lrsmart.py``) are installed in *Scripts* directory of python
+* download *[zip file project ](https://github.com/fdenivac/Lightroom-SQL-tools/archive/master.zip)*
+* extract the zip file
+* execute in the main directory: ``python setup.py install``
+
+Scripts (``lrselect.py`` and ``lrsmart.py``) are installed in *Scripts* directory of Python.
 
 ## Configuration
-Modify the config file *lrtools.ini* :
+Modify the config file *lrtools.ini*:
 * LRCatalog : the default Lightroom catalog to use
 * DayFirst :  parsing date format ("DD-MM-YY" if True, else  "YY-MM-DD")
 
@@ -55,21 +58,21 @@ Modify the config file *lrtools.ini* :
 </br>
 
 ## Using **lrselect** script
-Retrieves and displays various informations about photos or collections
+Retrieves and displays data about photos or collections
 
-It build SQL SELECT request from 2 strings describing informations to display, and criteria to search
+It builds an SQL SELECT query from two strings describing informations to display, and criteria to search
 
     ``usage: lrselect.py [OPTIONS] columns criteria``
 
-* Options for display sql request, result count, partial results
-* Jokers "%" can be used in criterion of type string (ex:name=%ab%)
+* Options for display sql query, result count, partial results
+* Wildcards "%" can be used in criterion of type string (ex:name=%ab%)
 * Criteria are combined with AND (the comma character ","), OR (the vertical line character "|" ) and parenthesis operators
-* Allows several same criterion (ex: "datecapt=>=1-5-2016, datecapt=<=1-9-2018, keyword=sea, keyword=tree")
+* Allows repeats of the same criterion (ex: "datecapt=>=1-5-2016, datecapt=<=1-9-2018, keyword=sea, keyword=tree")
 
 
 ### Some examples
 
-* photos taken around Paris, with camera RX100, between may and august 2018, and modified in lightroom since august 2019:
+* photos taken around Paris, with camera RX100, between May and August 2018, and modified in Lightroom since August 2019:
 
         lrselect.py "name, focal, speed, aperture, keywords" "gps=paris+10, camera=%rx100%, datecapt=>=1-5-2018, datecapt=<=1-7-2018, datemod=>=1-8-2019"
         * Photo results (2 photos) :
@@ -87,17 +90,17 @@ It build SQL SELECT request from 2 strings describing informations to display, a
             D7K_01977.JPG        | 2013-09-04T15:55:01 |  1600 |  280.0 | F20.0 |  1/500 | 55.0-300.0 mm f/4.5-5.6
             D7K_13025.DNG        | 2014-12-07T14:46:08 |  3200 |  300.0 |  F9.0 |  1/500 | 55.0-300.0 mm f/4.5-5.6
 
-* list of 70mm lenses used with nikon cameras :
+* list of 70mm lenses used with Nikon cameras :
 
         lrselect.py  "camera,lens"  "camera=nikon D8%, lens=%70%, distinct, sort=-1" --results --sql
-        * SQL request =  SELECT DISTINCT  cm.value, el.value FROM Adobe_images i LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef LEFT JOIN AgInternedExifLens el on el.id_local = em.lensRef WHERE cm.value LIKE "nikon D8%" AND el.value LIKE "%70%" ORDER BY 1 ASC
+        * SQL query =  SELECT DISTINCT  cm.value, el.value FROM Adobe_images i LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef LEFT JOIN AgInternedExifLens el on el.id_local = em.lensRef WHERE cm.value LIKE "nikon D8%" AND el.value LIKE "%70%" ORDER BY 1 ASC
         * Photo results (2 photos) :
             camera          | lens
             ==============================================
             NIKON D80       | 17.0-70.0 mm f/2.8-4.0
             NIKON D800E     | 24.0-70.0 mm f/2.8
 
-* list of camera Canon used :
+* list of Canon cameras used :
 
         lrselect.py "camera" "camera=canon%, distinct" -r
         * Photo results (4 photos) :
@@ -121,7 +124,7 @@ It build SQL SELECT request from 2 strings describing informations to display, a
                     [--raw-print] [--log LOG]
                     [columns] [criteria]
 
-    Select elements from SQL table from Lightroom catalog.
+    Select elements from an SQL table from an Adobe Lightroom catalog.
 
     For photo : specify the "columns" to display and the "criteria of selection in :
         columns :
@@ -188,7 +191,7 @@ It build SQL SELECT request from 2 strings describing informations to display, a
             - 'videos'     : (bool) type videos
             - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
             - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
-            - 'keyword'    : (str) keyword name. Only one keyword can be specified in request
+            - 'keyword'    : (str) keyword name. Only one keyword can be specified in query
             - 'haskeywords': (bool) photos with or without keywords
             - 'import'     : (int) import id
             - 'stacks'     : operation on stacks in :
@@ -242,8 +245,8 @@ It build SQL SELECT request from 2 strings describing informations to display, a
     options:
     -h, --help            show this help message and exit
     -b LRCAT, --lrcat LRCAT
-                            Ligthroom catalog file for database request (default:"C:\Lightroom\La Totale\La Totale.lrcat"), or INI file (lrtools.ini form)
-    -s, --sql             Display SQL request
+                            Ligthroom catalog file for database query (default:"C:\Lightroom\La Totale\La Totale.lrcat"), or INI file (lrtools.ini form)
+    -s, --sql             Display SQL query
     -c, --count           Display count of results
     -r, --results         Display datas results
     -z, --filesize        Compute and display files size selection. Alternative: add a column "filesize"
@@ -270,11 +273,11 @@ It build SQL SELECT request from 2 strings describing informations to display, a
 
 
 ## Using **lrsmart** script
-Retrieve smart collections stored in catalog, process SQL requests and displays results</br>
+Retrieve smart collections stored in catalog, process SQL queries and displays results</br>
 Smart files, exported from Lightroom or modified by hand, can be specified too.</br>
-Unfortunaly :
- * some criteria or operations of criterion are not implemented
- * some operations on criteria doesn't same exact results as Lightroom (as: all, touchtime ...)
+Unfortunately :
+ * some criteria or operations are not implemented
+ * some operations on criteria don't give the exact same results as Lightroom (as: all, touchtime ...)
 </br>
 => ... TODO improvements !
 
@@ -330,7 +333,7 @@ Unfortunaly :
                 0 = {'criteria': 'collection', 'operation': 'beginsWith', 'value': 'Ballades', 'value2': ''}
                 1 = {'criteria': 'hasGPSData', 'operation': '==', 'value': False}
                 combine = intersect
-           * SQL Request:  SELECT DISTINCT  fi.baseName || "." || fi.extension AS name, i.captureTime AS datecapt FROM Adobe_images i LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local  LEFT JOIN  AgLibraryCollectionimage ci0 ON ci0.image = i.id_local LEFT JOIN AgLibraryCollection col0 ON col0.id_local = ci0.Collection WHERE col0.name LIKE "Holidays%" INTERSECT SELECT  fi.baseName || "." || fi.extension AS name, i.captureTime AS datecapt FROM Adobe_images i  JOIN AgLibraryFile fi ON i.rootFile = fi.id_local LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image  WHERE em.hasGps == 0
+           * SQL query:  SELECT DISTINCT  fi.baseName || "." || fi.extension AS name, i.captureTime AS datecapt FROM Adobe_images i LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local  LEFT JOIN  AgLibraryCollectionimage ci0 ON ci0.image = i.id_local LEFT JOIN AgLibraryCollection col0 ON col0.id_local = ci0.Collection WHERE col0.name LIKE "Holidays%" INTERSECT SELECT  fi.baseName || "." || fi.extension AS name, i.captureTime AS datecapt FROM Adobe_images i  JOIN AgLibraryFile fi ON i.rootFile = fi.id_local LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image  WHERE em.hasGps == 0
            * Count results: 1880
            * Photo results (first 2 photos on 1880) :
              name                 |            datecapt
@@ -347,7 +350,7 @@ Unfortunaly :
                         [-n MAX_LINES] [-C COLUMNS] [-N] [--raw_print] [--log LOG]
                         [smart_name [smart_name ...]]
 
-        Execute smart collections from Lightroom catalog or from a exported file
+        Execute smart collections from an Adobe Lightroom catalog or from an exported file
         Supported criteria are : all, aperture, aspectRatio, camera, captureTime,
           collection, colorMode, creator, exif, fileFormat, filename, flashFired,
           focalLength, hasAdjustments, hasGPSData, heightCropped, iptc, isoSpeedRating,
@@ -360,9 +363,9 @@ Unfortunaly :
         optional arguments:
         -h, --help            show this help message and exit
         -b LRCAT, --lrcat LRCAT
-                                Ligthroom catalog file for database request
+                                Lightroom catalog file for database query
                                 (default:"I:\Lightroom\La Totale\La Totale.lrcat")
-        -f, --file            positionnal parameters are files, not smart collection
+        -f, --file            positional parameters are files, not smart collection
                                 names
         -l, --list            List smart collections of name "smart_name" from
                                 Lightroom catalog. "smart_name" can include jokers
@@ -370,9 +373,9 @@ Unfortunaly :
         --raw                 Display description of smart collection as stored
         -d, --dict            Display description of smart collection as python
                                 dictionnary
-        -s, --sql             Display SQL request
+        -s, --sql             Display SQL query
         -c, --count           Display count of results
-        -r, --results         Display datas results
+        -r, --results         Display query results
         -n MAX_LINES, --max_lines MAX_LINES
                                 Max number of results to display
         -C COLUMNS, --columns COLUMNS
@@ -380,5 +383,5 @@ Unfortunaly :
                                 column names, see help of lrselect.py
         -N, --no_header       don't print header (columns names)
         --raw_print           print raw value (for speed, aperture columns)
-        --log LOG             log on file
+        --log LOG             log to file
 

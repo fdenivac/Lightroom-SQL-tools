@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name = "lrtools",
-    description = "Retrieve photos informations from lightroom catalog",
+    description = "Retrieve photo data from Adobe Lightroom catalog",
     long_description = long_description,
     long_description_content_type = "text/markdown",
     url = "https://github.com/fdenivac/Lightroom-SQL-tools",
