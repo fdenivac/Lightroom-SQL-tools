@@ -105,7 +105,7 @@ class LRToolConfig(metaclass=Singleton):
 
             self.fs_encoding = parser.get(CONFIG_MAIN, 'FSEncoding')
 
-            self.dayfirst = parser.get(CONFIG_MAIN, 'DayFirst')
+            self.dayfirst = parser.getboolean(CONFIG_MAIN, 'DayFirst')
 
             self.geocoder = parser.get(CONFIG_MAIN, 'GeoCoder')
 
