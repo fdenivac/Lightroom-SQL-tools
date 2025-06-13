@@ -257,7 +257,7 @@ class LRCatDB():
         elif what == self.SMART_COLL:
             where = 'creationId="com.adobe.ag.library.smart_collection"'
         else:
-            where = 'creationId="com.adobe.ag.library.smart_collection" OR creationId="com.adobe.ag.library.collection"'
+            where = '(creationId="com.adobe.ag.library.smart_collection" OR creationId="com.adobe.ag.library.collection")'
         if collname:
             oper = 'LIKE' if '%' in collname else '='
             where += f' AND name {oper} "{collname}" COLLATE NOCASE'
