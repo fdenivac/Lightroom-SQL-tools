@@ -147,11 +147,18 @@ class CriterLexer():
         Check criters syntax (only following token)
         '''
         prev_token = None
+        par_level = 0
         for token, _ in self.tokens:
             allowed_tokens = self.RULES_FOLLOW[prev_token]
             if not token in allowed_tokens:
                 self.last_error = f'"{token}" not allowed after "{prev_token}"'
                 return False
-
+            if token == 'LPAR':
+                par_level += 1
+            elif token == 'RPAR':
+                par_level -= 1
             prev_token = token
+        if par_level != 0:
+            self.last_error = 'unbalanced parenthesis'
+            return False
         return True
