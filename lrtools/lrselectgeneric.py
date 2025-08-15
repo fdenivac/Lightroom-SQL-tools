@@ -106,6 +106,7 @@ class LRSelectGeneric():
         self.column_description = columns
         self.criteria_description = criteria
         self.groupby = ''
+        self.having_criters = []
         self.sql_column_names = []
         self.raw_column_names = []
 
@@ -285,12 +286,10 @@ class LRSelectGeneric():
                     col_sql, from_sql = dvalues[value]
                 if case in ['count', 'countby']:
                     parts = col_sql.split(' ')
-                    if len(parts) == 1:
-                        sqlcols.append(f"count({col_sql})")
-                    elif len(parts) == 3 and parts[1].upper() == 'AS':
-                        sqlcols.append(f"count({parts[0]}) AS count_{parts[2]}")
+                    if parts[-2].upper() == 'AS':
+                        sqlcols.append(f"count({''.join(parts[:-2])}) AS count_{parts[-1]}")
                         if case == 'countby':
-                            self.groupby = f'GROUP BY {parts[0]}'
+                            self.groupby = f'GROUP BY {parts[-1]}'
                     else:
                         raise LRSelectException('Error in count definition')
                 else:
@@ -308,13 +307,13 @@ class LRSelectGeneric():
                 self.raw_column_names.append(f"{key}={value}")
             else:
                 self.raw_column_names.append(f"{key}")
-            match = re.match(r'count\(([\w=]+)\)', key)
+            match = re.match(r'(count|countby)\(([\w=]+)\)', key)
             if match:
-                _column_to_sql({match.group(1):value}, 'count')
-                continue
-            match = re.match(r'countby\(([\w=]+)\)', key)
-            if match:
-                lkv = self._keyval_to_keys(match.group(1))
+                if match.group(1) == 'count':
+                    _column_to_sql({match.group(2):value}, 'count')
+                    continue
+                # countby :
+                lkv = self._keyval_to_keys(match.group(2))
                 _column_to_sql(lkv[0], 'countby')
                 continue
             _column_to_sql(keyval)
@@ -417,7 +416,7 @@ class LRSelectGeneric():
                 except TypeError as _e:
                     raise LRSelectException(f'Syntax error on criterion "{key}"') from _e
             # some specific keywords for SQL
-            if key == 'sort':       # specific key 'sort' for sql 'ORDER BY'
+            if key == 'sort':       # specific key for sql 'ORDER BY'
                 way = 'DESC'
                 if value[0] == '-':
                     way = 'ASC'
@@ -425,8 +424,12 @@ class LRSelectGeneric():
                 sort = f"ORDER BY {value} {way}"
                 prev_optoken = None
                 continue
-            if key == 'distinct':      # specific key 'sort' for sql 'SELECT DISTINCT'
+            if key == 'distinct':   # specific key for sql 'SELECT DISTINCT'
                 select_type = _where
+                prev_optoken = None
+                continue
+            if key == 'count':      # key for sql 'COUNT (*) ... HAVING'
+                self.having_criters.append(f"count_{value}")
                 prev_optoken = None
                 continue
 
@@ -475,5 +478,7 @@ class LRSelectGeneric():
         elif not select_type:
             select_type = 'SELECT'
 
-        sql = f"{select_type}  {fields} {self.froms} {wheres} {self.groupby} {sort}"
+        having = f"HAVING {' AND '.join(self.having_criters)}" if self.having_criters else ''
+
+        sql = f"{select_type}  {fields} {self.froms} {wheres} {self.groupby} {having} {sort}"
         return _finalize(sql)

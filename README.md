@@ -111,6 +111,23 @@ It builds an SQL SELECT query from two strings describing informations to displa
             Canon PowerShot G10
             Canon EOS 5D
 
+* Photos number for Canon cameras :
+
+        lrselect.py  "camera, countby(camera)" "camera=canon%, sort=2" -Nr
+            Canon PowerShot G2 |  10843
+            Canon EOS 5D |   1234
+            Canon DIGITAL IXUS 40 |    346
+            Canon PowerShot G10 |    140
+
+* duplicates photo name (name with virtual copies)
+
+        lrselect.py "name=basext_vc, countby(name=basext_vc)", "count=name>1" -r
+        * Photo results (2 photos) :
+            name=b | countb
+            ===============
+            IMG_102.jpg |      2
+            DSC_2038.jpg |      4
+
 * number of photos with "boat" and "family" keywords :
 
         lrselect.py  ""  "keyword=Boat,keyword=family" --count
@@ -119,12 +136,10 @@ It builds an SQL SELECT query from two strings describing informations to displa
 
 ### Complete Help :
 
-    usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-z] [-n MAX_LINES] [-f FILE]
-                    [-t {photo,collection}] [-N] [-w WIDTHS] [-S SEPARATOR] [-I INDENT]
-                    [--raw-print] [--log LOG]
+    usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-z] [-n MAX_LINES] [-f FILE] [-t {photo,collection}] [-N] [-w WIDTHS] [-S SEPARATOR] [-I INDENT] [--raw-print] [--log LOG]
                     [columns] [criteria]
 
-    Select elements from an SQL table from an Adobe Lightroom catalog.
+    Select elements from SQL table from Lightroom catalog.
 
     For photo : specify the "columns" to display and the "criteria of selection in :
         columns :
@@ -161,25 +176,29 @@ It builds an SQL SELECT query from two strings describing informations to displa
             - 'pubname'    : remote path and name of published photo
             - 'pubcollection' : name of publish collection
             - 'pubtime'    : published datetime in seconds from 2001-1-1
-            - 'filesize'   : compute and display files size
+            - 'pubposition': order number (float) in collection
+            - 'count(NAME)' : count not NULL value for column NAME (ex: "count(master)")
+            - 'countby(NAME)' : count aggregated not NULL value for column NAME
         criterias :
             - 'name'       : (str) filename without extension
             - 'exactname'  : (str) filename insensitive without extension
             - 'ext'        : (str) file extension
             - 'id'         : (int) photo id (Adobe_images.id_local)
             - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
-            - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note. (ex: "rating==5")
+            - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note (ex: "rating==5")
             - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
             - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
             - 'creator'    : (str) photo creator
             - 'caption'    : (true/false/str) photo caption
             - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
-            - 'modcount'   : (int) number of modifications
             - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
+            - 'modcount'   : (int) number of modifications
             - 'iso'        : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
             - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
             - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
             - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
+            - 'camera'     : (str) camera name (ex:"camera=canon%")
+            - 'lens'       : (str) lens name (ex:"lens=%300%")
             - 'width'      : (int) cropped image width. Need to include column "dims"
             - 'height      : (int) cropped image height. Need to include column "dims"
             - 'aspectratio': (float) aspect ratio (width/height)
@@ -191,7 +210,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
             - 'videos'     : (bool) type videos
             - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
             - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
-            - 'keyword'    : (str) keyword name. Only one keyword can be specified in query
+            - 'keyword'    : (str) keyword name. Only one keyword can be specified in request
             - 'haskeywords': (bool) photos with or without keywords
             - 'import'     : (int) import id
             - 'stacks'     : operation on stacks in :
@@ -199,7 +218,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
                     'no'     = excludes photos in a stack
                     'top'    = photos at the top of stacks
                     'no+top' = excludes photos in a stack not at first position
-                    <NUM>    = photos in the stack identifier NUM                    
+                    <NUM>    = photos in the stack identifier NUM
             - 'metastatus' :  metadatas status
                     'conflict' = metadatas different on disk from db
                     'changedondisk' = metadata changed externally on disk
@@ -212,10 +231,10 @@ It builds an SQL SELECT query from two strings describing informations to displa
             - 'pubcollection: (str) publish collection name
             - 'pubtime     : (str) publish time,  operator (<,<=,>, >=)
             - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
-            - 'sort'       : sql sort string
-            - 'distinct'   : suppress similar lines of results
 
-            - sql : return SQL string only
+            - 'count(NAME) : (str) criter for column countby(NAME)
+            - 'sort'       : (int|str) sort result: column index (one based) or column name 
+            - 'distinct'   : suppress similar lines of results
 
     For collection : specify the "columns" to display and the "criteria" of selection in :
             columns :
@@ -245,8 +264,8 @@ It builds an SQL SELECT query from two strings describing informations to displa
     options:
     -h, --help            show this help message and exit
     -b LRCAT, --lrcat LRCAT
-                            Ligthroom catalog file for database query (default:"C:\Lightroom\La Totale\La Totale.lrcat"), or INI file (lrtools.ini form)
-    -s, --sql             Display SQL query
+                            Ligthroom catalog file for database request (default:"C:\Lightroom\La Totale\La Totale.lrcat"), or INI file (lrtools.ini form)
+    -s, --sql             Display SQL request
     -c, --count           Display count of results
     -r, --results         Display datas results
     -z, --filesize        Compute and display files size selection. Alternative: add a column "filesize"
@@ -264,6 +283,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
                             space indentation in output (default:"4")
     --raw-print           print raw value (for speed, aperture columns)
     --log LOG             log on file
+
 
 
 

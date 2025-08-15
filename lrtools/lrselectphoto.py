@@ -84,10 +84,6 @@ class LRSelectPhoto(LRSelectGeneric):
                         [ 'LEFT JOIN Adobe_AdditionalMetadata am on i.id_local = am.image' ] \
                     ] \
                 }, \
-            'count': { \
-                'name' : [ 'count(name) AS countname' ,  None ], \
-                'master' : [ 'count(masterimage) AS countmaster' ,  None ], \
-                }, \
             'stack' : { \
                 'True' :  \
                     [   'fsi.stack AS stack', \
@@ -365,6 +361,10 @@ class LRSelectPhoto(LRSelectGeneric):
                     '', \
                     'GROUP BY %s', \
                     ],
+                'count' : [ \
+                    '', \
+                    'HAVING %s', \
+                    ],
             }
         )
 
@@ -632,6 +632,8 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'pubcollection' : name of publish collection
             - 'pubtime'    : published datetime in seconds from 2001-1-1
             - 'pubposition': order number (float) in collection
+            - 'count(NAME)' : count not NULL value for column NAME (ex: "count(master)")
+            - 'countby(NAME)' : count aggregated not NULL value for column NAME
         criterias :
             - 'name'       : (str) filename without extension
             - 'exactname'  : (str) filename insensitive without extension
@@ -684,6 +686,8 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'pubcollection: (str) publish collection name
             - 'pubtime     : (str) publish time,  operator (<,<=,>, >=)
             - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
+
+            - 'count(NAME) : (str) criter for column countby(NAME)
             - 'sort'       : (int|str) sort result: column index (one based) or column name 
             - 'distinct'   : suppress similar lines of results
         kwargs :
