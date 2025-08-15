@@ -13,6 +13,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import sqlite3
 
+from lrtools import VERSION as lr_version
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config, LRConfigException
 
@@ -90,6 +91,7 @@ def main():
         handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
         log.addHandler(handler)
     log.info('lrselect start')
+    log.info('lrtools version : %s', lr_version)
     log.info('arguments: %s', ' '.join(sys.argv[1:]))
 
     # --max_lines option implies --results
