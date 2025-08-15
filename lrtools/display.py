@@ -58,6 +58,14 @@ def display_speed(value):
         return f'1/{value:.0f}'
     return f'{1/value:.0f}'
 
+def display_boolean(value):
+    ''' format boolean value '''
+    if value == 0:
+        return 'no'
+    if value == 1:
+        return 'yes'
+    return '?'
+
 def display_date(value):
     ''' format date : remove sub-seconds '''
     return value[:19]
@@ -92,11 +100,14 @@ DEFAULT_SPECS = {
     'keywords'  : ('%-30s', display_keywords),
     'collections' : ('%-30s', None),
     'camera'    : ('%-15s', None),
+    'camerasn'  : ('%-8s', None),
     'lens'      : ('%-25s', None),
     'iso'       : ('%5s', display_iso),
     'focal'     : ('%6s', None),
     'aperture'  : ('%5s', display_aperture),
     'speed'     : ('%6s', display_speed),
+    'flash'     : ('%3s', display_boolean),
+    'monochrome': ('%3s', display_boolean),
     'creator'   : ('%-18s', None),
     'caption'   : ('%-30s', None),
     'dims'      : ('%-10s', None),

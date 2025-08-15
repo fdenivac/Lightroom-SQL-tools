@@ -116,6 +116,10 @@ class LRSelectPhoto(LRSelectGeneric):
                 'True' : [ 'cm.value AS camera', \
                         ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image',
                         'LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef'] ] },
+            'camerasn' : { \
+                'True' : [ 'csn.value AS camerasn', \
+                        ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image',
+                        'LEFT JOIN AgInternedExifCameraSN csn on csn.id_local = em.cameraSNRef'] ] },
             'lens' : { \
                 'True' : [ 'el.value AS lens', \
                         ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image',
@@ -128,6 +132,10 @@ class LRSelectPhoto(LRSelectGeneric):
                 'True' : [ 'em.aperture AS aperture',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
             'speed' : { \
                 'True' : [ 'em.shutterSpeed AS speed',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+            'monochrome' : { \
+                'True' : [ 'am.monochrome',  ['LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image'] ] }, \
+            'flash' : { \
+                'True' : [ 'em.flashFired AS flash',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
             'dims' : { \
                 'True' : [ '(SELECT CASE '\
                             'WHEN ids.croppedWidth <> "uncropped" AND i.orientation IN ("AB", "BA", "CD", "DC") THEN CAST(ids.croppedWidth AS int) || "x" || CAST(ids.croppedHeight AS int) '\
@@ -268,10 +276,19 @@ class LRSelectPhoto(LRSelectGeneric):
                     'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
                     'em.shutterSpeed %s', self.func_speed,
                     ],
+                'flash' : [ \
+                    'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
+                    'em.flashFired %s', self.func_value_or_null
+                    ],
                 'camera' : [ \
                     ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
                     ' LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef'], \
                     'cm.value LIKE "%s"',
+                    ],
+                'camerasn' : [ \
+                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
+                    ' LEFT JOIN AgInternedExifCameraSN csn on csn.id_local = em.cameraSNRef'], \
+                    'csn.value LIKE "%s"',
                     ],
                 'lens' : [ \
                     ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
@@ -290,6 +307,10 @@ class LRSelectPhoto(LRSelectGeneric):
                 'aspectratio' : [ \
                     '', \
                     'i.aspectRatioCache %s', \
+                    ],
+                'monochrome' : [ \
+                    ['LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image'], \
+                    'am.monochrome = %s', self.func_0_1,
                     ],
                 'hasgps' : [ \
                     ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'], \
@@ -598,8 +619,13 @@ class LRSelectPhoto(LRSelectGeneric):
         '''
         Build SQL request for photo table (Adobe_images) from key/value pair
         columns :
-            - 'name'='base'|'basext'|'full' : base name, basename + extension, full name (path,name, extension)
-                With 'base_vc', 'basext_vc', 'full_vc' names for virtual copies are completed with copy name.
+            - 'name':
+                'base' : base name (default), ex: "IMG_1101"
+                'basext: base name + extension, ex: "IMG_1101.jpg"
+                'full' : path + base name + extension, ex: "D:\\Photos\\IMG_1101.jpg"
+                'base_vc' : base name + virtual copy name, ex: "IMG_1101 Copy 1"
+                'basext_vc': base name + virtual copy name + extension, ex: "IMG_1101 Copy 1.jpg"
+                'full_vc' :  path + base name + virtual copy name + extension, ex: "D:\\Photos\\IMG_1101 Copy 1.jpg"
             - 'id'         : id photo (Adobe_images.id_local)
             - 'uuid'       : UUID photo (Adobe_images.id_global)
             - 'rating'     : rating/note
@@ -624,6 +650,8 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'focal'      : focal lens
             - 'aperture'   : aperture lens
             - 'speed'      : speed shutter
+            - 'monochrome' : monochrome image when = 1
+            - 'flash'      : flash use ("0" = not used, "1" = used, "" = unknown)
             - 'latitude'   : GPS latitude
             - 'longitude'  : GPS longitude
             - 'creator'    : photo creator
@@ -652,11 +680,14 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
             - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
             - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
+            - 'flash'      : (0|1|null) flash use : 0=not used, 1=fired, null=unknown (ex: flash=1)
             - 'camera'     : (str) camera name (ex:"camera=canon%")
+            - 'camerasn'   : (str) camera serial number
             - 'lens'       : (str) lens name (ex:"lens=%300%")
+            - 'monochrome' : (bool) monochrome (ex="monochrome=1")
             - 'width'      : (int) cropped image width. Need to include column "dims"
             - 'height      : (int) cropped image height. Need to include column "dims"
-            - 'aspectratio': (float) aspect ratio (width/height)
+            - 'aspectratio': (float) aspect ratio (width/height) (use ">1" for landscape and "<1" for portrait)
             - 'hasgps'     : (bool) has GPS datas
             - 'gps'        : (str) GPS rectangle defined by :
                                 - town or coordinates, and bound in kilometer (ex:"paris+20", "45.7578;4.8320+10"),
