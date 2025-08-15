@@ -450,7 +450,7 @@ class LRSelectPhoto(LRSelectGeneric):
         for index, char in enumerate(value):
             if char.isnumeric():
                 oper = value[:index]
-                if oper[-1].upper() == 'F':
+                if oper and oper[-1].upper() == 'F':
                     oper = oper[:-1]
                 value = value[index:]
                 break
@@ -458,7 +458,7 @@ class LRSelectPhoto(LRSelectGeneric):
             raise LRSelectException('invalid aperture value')
         if not oper:
             oper = '='
-        return f"{oper} {2 * math.log(float(value), 2)}"
+        return f"{oper} ROUND({2 * math.log(float(value), 2)}, 6)"
 
     def func_speed(self, value):
         '''
