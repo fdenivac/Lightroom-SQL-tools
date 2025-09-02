@@ -57,6 +57,12 @@ class LRSelectPhoto(LRSelectGeneric):
                 }, \
             'vname' : { \
                 'True' : [ 'i.copyName AS vname',  None ] }, \
+            'folder' : { \
+                'True' : \
+                    [   'rf.absolutePath || fo.pathFromRoot AS folder', \
+                        [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local', 'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local', 'LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local' ],
+                    ], \
+                }, \
             'uuid' : { \
                 'True' : [ 'i.id_global AS uuid',  None ] }, \
             'master' : { \
@@ -205,6 +211,12 @@ class LRSelectPhoto(LRSelectGeneric):
                 'exact_ext' : [ \
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
                     'UPPER(fi.extension) = "%s"'
+                    ],
+                'folder' : [ \
+                    [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
+                     'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local',
+                     'LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local'],
+                    'UPPER(rf.absolutePath || fo.pathFromRoot) LIKE "%s"', \
                     ],
                 'id' : [ \
                     '', \
@@ -626,6 +638,7 @@ class LRSelectPhoto(LRSelectGeneric):
                 'base_vc' : base name + virtual copy name, ex: "IMG_1101 Copy 1"
                 'basext_vc': base name + virtual copy name + extension, ex: "IMG_1101 Copy 1.jpg"
                 'full_vc' :  path + base name + virtual copy name + extension, ex: "D:\\Photos\\IMG_1101 Copy 1.jpg"
+            - 'folder'     : folder name
             - 'id'         : id photo (Adobe_images.id_local)
             - 'uuid'       : UUID photo (Adobe_images.id_global)
             - 'rating'     : rating/note
@@ -665,14 +678,15 @@ class LRSelectPhoto(LRSelectGeneric):
         criterias :
             - 'name'       : (str) filename without extension
             - 'exactname'  : (str) filename insensitive without extension
+            - 'folder'     : (str) folder name, with optional wildcard '%' (ex: folder=%family%)
             - 'ext'        : (str) file extension
             - 'id'         : (int) photo id (Adobe_images.id_local)
             - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
             - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note (ex: "rating==5")
             - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
             - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
-            - 'creator'    : (str) photo creator
-            - 'caption'    : (true/false/str) photo caption
+            - 'creator'    : (str) photo creator, with optional wildcard '%'
+            - 'caption'    : (true/false/str) photo caption, with optional wildcard '%'
             - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
             - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
             - 'modcount'   : (int) number of modifications
@@ -681,9 +695,9 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<=5.6")
             - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
             - 'flash'      : (0|1|null) flash use : 0=not used, 1=fired, null=unknown (ex: flash=1)
-            - 'camera'     : (str) camera name (ex:"camera=canon%")
+            - 'camera'     : (str) camera name, with optional wildcard '%' (ex:"camera=canon%")
             - 'camerasn'   : (str) camera serial number
-            - 'lens'       : (str) lens name (ex:"lens=%300%")
+            - 'lens'       : (str) lens name, with optional wildcard '%' (ex:"lens=%300%")
             - 'monochrome' : (bool) monochrome (ex="monochrome=1")
             - 'width'      : (int) cropped image width. Need to include column "dims"
             - 'height      : (int) cropped image height. Need to include column "dims"

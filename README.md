@@ -136,107 +136,121 @@ It builds an SQL SELECT query from two strings describing informations to displa
 
 ### Complete Help :
 
-    usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-z] [-n MAX_LINES] [-f FILE] [-t {photo,collection}] [-N] [-w WIDTHS] [-S SEPARATOR] [-I INDENT] [--raw-print] [--log LOG]
+    usage: lrselect.py [-h] [-b LRCAT] [-s] [-c] [-r] [-z] [-n MAX_LINES] [-f FILE]
+                    [-t {photo,collection}] [-N] [-w WIDTHS] [-S SEPARATOR] [-I INDENT]
+                    [--raw-print] [--log LOG] [--version]
                     [columns] [criteria]
 
     Select elements from SQL table from Lightroom catalog.
 
     For photo : specify the "columns" to display and the "criteria of selection in :
-        columns :
-            - 'name'='base'|'basext'|'full' : base name, basename + extension, full name (path,name, extension)
-                With 'base_vc', 'basext_vc', 'full_vc' names for virtual copies are completed with copy name.
-            - 'id'         : id photo (Adobe_images.id_local)
-            - 'uuid'       : UUID photo (Adobe_images.id_global)
-            - 'rating'     : rating/note
-            - 'colorlabel' : color and label
-            - 'datemod'    : modificaton date
-            - 'datecapt'   : capture date
-            - 'modcount'   : number of modifications
-            - 'master'     : master image of virtual copy
-            - 'xmp'        : all xmp metadatas
-            - 'vname'      : virtual copy name
-            - 'stackpos'   : position in stack
-            - 'stack'      : stack identifier
-            - 'keywords'   : keywords list
-            - 'collections': collections list
-            - 'exif'       : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
-            - 'extfile'    : extension of an external/extension file (jpg,xmp,...)
-            - 'dims'       : image dimensions in form <WIDTH>x<HEIGHT>
-            - 'aspectratio': aspect ratio (width/height)
-            - 'camera'     : camera name
-            - 'lens'       : lens name
-            - 'iso'        : ISO value
-            - 'focal'      : focal lens
-            - 'aperture'   : aperture lens
-            - 'speed'      : speed shutter
-            - 'latitude'   : GPS latitude
-            - 'longitude'  : GPS longitude
-            - 'creator'    : photo creator
-            - 'caption'    : photo caption
-            - 'pubname'    : remote path and name of published photo
-            - 'pubcollection' : name of publish collection
-            - 'pubtime'    : published datetime in seconds from 2001-1-1
-            - 'pubposition': order number (float) in collection
-            - 'count(NAME)' : count not NULL value for column NAME (ex: "count(master)")
-            - 'countby(NAME)' : count aggregated not NULL value for column NAME
-        criterias :
-            - 'name'       : (str) filename without extension
-            - 'exactname'  : (str) filename insensitive without extension
-            - 'ext'        : (str) file extension
-            - 'id'         : (int) photo id (Adobe_images.id_local)
-            - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
-            - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note (ex: "rating==5")
-            - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
-            - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
-            - 'creator'    : (str) photo creator
-            - 'caption'    : (true/false/str) photo caption
-            - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
-            - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
-            - 'modcount'   : (int) number of modifications
-            - 'iso'        : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
-            - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
-            - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
-            - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
-            - 'camera'     : (str) camera name (ex:"camera=canon%")
-            - 'lens'       : (str) lens name (ex:"lens=%300%")
-            - 'width'      : (int) cropped image width. Need to include column "dims"
-            - 'height      : (int) cropped image height. Need to include column "dims"
-            - 'aspectratio': (float) aspect ratio (width/height)
-            - 'hasgps'     : (bool) has GPS datas
-            - 'gps'        : (str) GPS rectangle defined by :
-                                - town or coordinates, and bound in kilometer (ex:"paris+20", "45.7578;4.8320+10"),
-                                - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
-                                - a geolocalized Lightroom photo name (ex:"photo:NIK_10312")
-            - 'videos'     : (bool) type videos
-            - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
-            - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
-            - 'keyword'    : (str) keyword name. Only one keyword can be specified in request
-            - 'haskeywords': (bool) photos with or without keywords
-            - 'import'     : (int) import id
-            - 'stacks'     : operation on stacks in :
-                    'yes'    = photos in a stack
-                    'no'     = excludes photos in a stack
-                    'top'    = photos at the top of stacks
-                    'no+top' = excludes photos in a stack not at first position
-                    <NUM>    = photos in the stack identifier NUM
-            - 'metastatus' :  metadatas status
-                    'conflict' = metadatas different on disk from db
-                    'changedondisk' = metadata changed externally on disk
-                    'hasbeenchanged' = to be save on disk
-                    'conflict' = metadatas different on disk from db
-                    'uptodate' = uptodate, in error, or to write on disk
-                    'unknown' = write error, phot missing ...
-            - 'idcollection' : (int) collection id
-            - 'collection' : (str) collection name
-            - 'pubcollection: (str) publish collection name
-            - 'pubtime     : (str) publish time,  operator (<,<=,>, >=)
-            - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
+            columns :
+                - 'name':
+                    'base' : base name (default), ex: "IMG_1101"
+                    'basext: base name + extension, ex: "IMG_1101.jpg"
+                    'full' : path + base name + extension, ex: "D:\Photos\IMG_1101.jpg"
+                    'base_vc' : base name + virtual copy name, ex: "IMG_1101 Copy 1"
+                    'basext_vc': base name + virtual copy name + extension, ex: "IMG_1101 Copy 1.jpg"
+                    'full_vc' :  path + base name + virtual copy name + extension, ex: "D:\Photos\IMG_1101 Copy 1.jpg"
+                - 'folder'     : folder name
+                - 'id'         : id photo (Adobe_images.id_local)
+                - 'uuid'       : UUID photo (Adobe_images.id_global)
+                - 'rating'     : rating/note
+                - 'colorlabel' : color and label
+                - 'datemod'    : modificaton date
+                - 'datecapt'   : capture date
+                - 'modcount'   : number of modifications
+                - 'master'     : master image of virtual copy
+                - 'xmp'        : all xmp metadatas
+                - 'vname'      : virtual copy name
+                - 'stackpos'   : position in stack
+                - 'stack'      : stack identifier
+                - 'keywords'   : keywords list
+                - 'collections': collections list
+                - 'exif'       : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
+                - 'extfile'    : extension of an external/extension file (jpg,xmp,...)
+                - 'dims'       : image dimensions in form <WIDTH>x<HEIGHT>
+                - 'aspectratio': aspect ratio (width/height)
+                - 'camera'     : camera name
+                - 'lens'       : lens name
+                - 'iso'        : ISO value
+                - 'focal'      : focal lens
+                - 'aperture'   : aperture lens
+                - 'speed'      : speed shutter
+                - 'monochrome' : monochrome image when = 1
+                - 'flash'      : flash use ("0" = not used, "1" = used, "" = unknown)
+                - 'latitude'   : GPS latitude
+                - 'longitude'  : GPS longitude
+                - 'creator'    : photo creator
+                - 'caption'    : photo caption
+                - 'pubname'    : remote path and name of published photo
+                - 'pubcollection' : name of publish collection
+                - 'pubtime'    : published datetime in seconds from 2001-1-1
+                - 'pubposition': order number (float) in collection
+                - 'count(NAME)' : count not NULL value for column NAME (ex: "count(master)")
+                - 'countby(NAME)' : count aggregated not NULL value for column NAME
+            criterias :
+                - 'name'       : (str) filename without extension
+                - 'exactname'  : (str) filename insensitive without extension
+                - 'folder'     : (str) folder name, with optional wilcard '%' (ex: folder=%family%)
+                - 'ext'        : (str) file extension
+                - 'id'         : (int) photo id (Adobe_images.id_local)
+                - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
+                - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note (ex: "rating==5")
+                - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
+                - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
+                - 'creator'    : (str) photo creator, with optional wilcard '%'
+                - 'caption'    : (true/false/str) photo caption, with optional wilcard '%'
+                - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
+                - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
+                - 'modcount'   : (int) number of modifications
+                - 'iso'        : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
+                - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
+                - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<=5.6")
+                - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
+                - 'flash'      : (0|1|null) flash use : 0=not used, 1=fired, null=unknown (ex: flash=1)
+                - 'camera'     : (str) camera name, with optional wilcard '%' (ex:"camera=canon%")
+                - 'camerasn'   : (str) camera serial number
+                - 'lens'       : (str) lens name, with optional wilcard '%' (ex:"lens=%300%")
+                - 'monochrome' : (bool) monochrome (ex="monochrome=1")
+                - 'width'      : (int) cropped image width. Need to include column "dims"
+                - 'height      : (int) cropped image height. Need to include column "dims"
+                - 'aspectratio': (float) aspect ratio (width/height) (use ">1" for landscape and "<1" for portrait)
+                - 'hasgps'     : (bool) has GPS datas
+                - 'gps'        : (str) GPS rectangle defined by :
+                                    - town or coordinates, and bound in kilometer (ex:"paris+20", "45.7578;4.8320+10"),
+                                    - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
+                                    - a geolocalized Lightroom photo name (ex:"photo:NIK_10312")
+                - 'videos'     : (bool) type videos
+                - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
+                - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
+                - 'keyword'    : (str) keyword name. Only one keyword can be specified in request
+                - 'haskeywords': (bool) photos with or without keywords
+                - 'import'     : (int) import id
+                - 'stacks'     : operation on stacks in :
+                        'yes'    = photos in a stack
+                        'no'     = excludes photos in a stack
+                        'top'    = photos at the top of stacks
+                        'no+top' = excludes photos in a stack not at first position
+                        <NUM>    = photos in the stack identifier NUM
+                - 'metastatus' :  metadatas status
+                        'conflict' = metadatas different on disk from db
+                        'changedondisk' = metadata changed externally on disk
+                        'hasbeenchanged' = to be save on disk
+                        'conflict' = metadatas different on disk from db
+                        'uptodate' = uptodate, in error, or to write on disk
+                        'unknown' = write error, phot missing ...
+                - 'idcollection' : (int) collection id
+                - 'collection' : (str) collection name
+                - 'pubcollection: (str) publish collection name
+                - 'pubtime     : (str) publish time,  operator (<,<=,>, >=)
+                - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
 
-            - 'count(NAME) : (str) criter for column countby(NAME)
-            - 'sort'       : (int|str) sort result: column index (one based) or column name 
-            - 'distinct'   : suppress similar lines of results
+                - 'count(NAME) : (str) criter for column countby(NAME)
+                - 'sort'       : (int|str) sort result: column index (one based) or column name
+                - 'distinct'   : suppress similar lines of results
 
-    For collection : specify the "columns" to display and the "criteria" of selection in :
+    For collection (use "-t collection") : specify the "columns" to display and the "criteria" of selection in :
             columns :
                 - 'name'      : collection name
                 - 'id'        : id collection
@@ -253,7 +267,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
     File sizes can be computed/displayed via the pseudo column "filesize", or option "--filesize".
 
     Examples:
-            lrselect.py --sql --results "basename,datecapt" "rating=>4,video=0"
+            lrselect.py --sql --results "name=basext,datecapt" "rating=>4,videos=0"
             lrselect.py  "name,datecapt,latitude,longitude,keywords" "rating=>4,videos=0" --results --count
             lrselect.py  "datecapt,filesize" "rating=>4,videos=0" --results
 
@@ -264,7 +278,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
     options:
     -h, --help            show this help message and exit
     -b LRCAT, --lrcat LRCAT
-                            Ligthroom catalog file for database request (default:"C:\Lightroom\La Totale\La Totale.lrcat"), or INI file (lrtools.ini form)
+                            Ligthroom catalog file for database request (default:"C:\Users\Default\Documents\My Lightroom Catalog.lrcat"), or INI file (lrtools.ini form)
     -s, --sql             Display SQL request
     -c, --count           Display count of results
     -r, --results         Display datas results
@@ -283,7 +297,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
                             space indentation in output (default:"4")
     --raw-print           print raw value (for speed, aperture columns)
     --log LOG             log on file
-
+    --version, -V         show version and exit
 
 
 
