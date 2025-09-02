@@ -47,7 +47,7 @@ def main():
     end = doc_func.find('kwargs :')
     description += doc_func[start:end]
     # add part of help for function LRSelectCollection.select_generic
-    description += '\nFor collection : specify the "columns" to display and the "criteria" of selection in :'
+    description += '\nFor collection (use "-t collection") : specify the "columns" to display and the "criteria" of selection in :'
     doc_func = LRSelectCollection.select_generic.__doc__
     start = doc_func.find('columns :')
     start = doc_func.rfind('\n', 0, start)
@@ -56,7 +56,7 @@ def main():
     # complete help
     description += '\nFile sizes can be computed/displayed via the pseudo column "filesize", or option "--filesize".\n'
     description += '\nExamples:\n' \
-            '\tlrselect.py --sql --results "basename,datecapt" "rating=>4,video=0"\n' \
+            '\tlrselect.py --sql --results "name=basext,datecapt" "rating=>4,videos=0"\n' \
             '\tlrselect.py  "name,datecapt,latitude,longitude,keywords" "rating=>4,videos=0" --results --count\n' \
             '\tlrselect.py  "datecapt,filesize" "rating=>4,videos=0" --results'
 
@@ -78,8 +78,13 @@ def main():
     parser.add_argument('-I', '--indent', type=int, default=4, help='space indentation in output (default:"%(default)s")')
     parser.add_argument('--raw-print', action='store_true', help='print raw value (for speed, aperture columns)')
     parser.add_argument('--log', help='log on file')
+    parser.add_argument('--version', '-V', action='store_true', help='show version and exit')
 
     args = parser.parse_args()
+
+    if args.version:
+        print(f'lrselect version : {lr_version} , using python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
+        return
 
     # logging
     if args.log:
