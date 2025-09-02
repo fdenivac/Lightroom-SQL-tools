@@ -111,7 +111,6 @@ class LRSelectPhoto(LRSelectGeneric):
                         None \
                     ] \
                 }, \
-
             'camera' : { \
                 'True' : [ 'cm.value AS camera', \
                         ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image',
@@ -225,7 +224,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'modcount' : [ \
                     '', \
-                    'i.touchcount = %s', \
+                    'i.touchcount %s %s', self.func_oper_value, \
                     ],
                 'videos' : [ \
                     '', \
@@ -262,11 +261,11 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'iso' : [ \
                     'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
-                    'em.isoSpeedRating %s',
+                    'em.isoSpeedRating %s %s', self.func_oper_value,
                     ],
                 'focal' : [ \
                     'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
-                    'em.focalLength %s',
+                    'em.focalLength %s %s', self.func_oper_value,
                     ],
                 'aperture' : [ \
                     'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
@@ -306,7 +305,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 'aspectratio' : [ \
                     '', \
-                    'i.aspectRatioCache %s', \
+                    'i.aspectRatioCache %s %s', self.func_oper_value,\
                     ],
                 'monochrome' : [ \
                     ['LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image'], \
@@ -567,11 +566,12 @@ class LRSelectPhoto(LRSelectGeneric):
         '''
         select rating
         '''
-        if value[0] == '<' or value == '>=0':
-            return f"(i.rating IS NULL OR i.rating {value})"
-        if value == "=0":
+        oper, value = self.func_oper_value(value)
+        if oper == '<' or (oper == '>=' and value=='0'):
+            return f"(i.rating IS NULL OR i.rating {oper} {value})"
+        if oper == '=' and value == '0':
             return 'i.rating IS NULL'
-        return f"i.rating {value}"
+        return f"i.rating {oper} {value}"
 
     def func_flag(self, value):
         '''
@@ -678,7 +678,7 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'modcount'   : (int) number of modifications
             - 'iso'        : (int) ISO value with operators <,<=,>,>=,= (ex: "iso=>=1600")
             - 'focal'      : (int) focal lens with operators <,<=,>,>=,= (ex: "iso=>135")
-            - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<8")
+            - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<=5.6")
             - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
             - 'flash'      : (0|1|null) flash use : 0=not used, 1=fired, null=unknown (ex: flash=1)
             - 'camera'     : (str) camera name (ex:"camera=canon%")

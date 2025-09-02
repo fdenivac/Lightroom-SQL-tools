@@ -164,6 +164,18 @@ class LRSelectGeneric():
             raise LRSelectException('invalid date value on "datemod"')
         return oper, dtmod
 
+    def func_oper_value(self, value):
+        ''' optional operand and numeric value '''
+        oper = None
+        for index, char in enumerate(value):
+            if char.isalnum():
+                oper = value[:index] if value[:index] else '='
+                value = value[index:]
+                break
+        if oper is None:
+            raise LRSelectException('operator without value')
+        return oper, value
+
     def func_bool_to_equal(self, value):
         ''' value is boolean '''
         return '=' if to_bool(value) else '!='
