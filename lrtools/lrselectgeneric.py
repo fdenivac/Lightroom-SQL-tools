@@ -122,6 +122,7 @@ class LRSelectGeneric():
 
     def func_oper_parsedate(self, value):
         ''' parse opration and date value '''
+        oper = False
         for index, char in enumerate(value):
             if char.isnumeric():
                 oper = value[:index]
@@ -370,15 +371,20 @@ class LRSelectGeneric():
             return self.lrdb.cursor
 
         # logging
-        log = logging.getLogger()
+        log = logging.getLogger(__name__)
         log.info('select_generic("%s" "%s")', columns, criters)
 
+        # init
         fields = []
         self.froms = [self.from_table]
         wheres = []
         sort = ''
         nb_wheres = {}
         select_type = None
+        self.groupby = ''
+        self.having_criters = []
+        self.sql_column_names = []
+        self.raw_column_names = []
 
         #
         # process predefined sql functions
