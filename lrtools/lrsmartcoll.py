@@ -159,8 +159,8 @@ class SQLSmartColl():
     def criteria_touchTime(self):
         ''' criteria touchTime '''
         # convert and shift of 24 hours for end of day
-        touchtime1 = date_to_lrstamp(self.func['value']) + (24 * 3600)
-        touchtime2 = date_to_lrstamp(self.func['value2']) + (24 * 3600)
+        touchtime1 = date_to_lrstamp(self.func['value'] + (24 * 3600))
+        touchtime2 = date_to_lrstamp(self.func['value2']) + (24 * 3600) if 'value2' in self.func else 0
         if self.func['operation'] == 'in':
             self.sql += self._complete_sql('', f" WHERE i.touchTime >= {touchtime1} AND  i.touchTime <= {touchtime2}")
         elif self.func['operation'] == 'inLast':
@@ -669,12 +669,10 @@ class SQLSmartColl():
 
 
 
-def select_smart(lrdb, smart_name, columns, is_file=False):
+def select_smart(lrdb, smart_name, columns, is_file=False, sql_only=False):
     '''
     Execute smart collection :
-       build SQL string from lua source
-       execute and
-    return rows
+       build SQL string from lua source, execute and return rows
     '''
     if is_file:
         smart = open(smart_name, 'r', encoding='utf-8').read()
@@ -694,9 +692,11 @@ def select_smart(lrdb, smart_name, columns, is_file=False):
     else:
         smart = lrdb.get_smartcoll_data(smart_name)
         if not smart:
-            raise OSError
+            raise SmartException(f'smart collection "{smart_name}" not found')
 
     builder = SQLSmartColl(lrdb, smart)
     sql = builder.build_sql(columns)
+    if sql_only:
+        return sql
     lrdb.cursor.execute(sql)
     return lrdb.cursor.fetchall()
