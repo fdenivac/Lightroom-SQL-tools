@@ -14,6 +14,42 @@ from datetime import datetime
 from .lrselectgeneric import LRSelectGeneric, LRSelectException
 from .gps import geocodage, square_around_location
 
+
+def criteria_to_dict(criteria: str) -> dict:
+    """
+    return dict of criter/value from string
+    
+    As some criteria can be repeated more than once, 
+        value for a criter is a list
+    """
+    dcriteria = {}
+    for crit in criteria.split(","):
+        crit = crit.strip()
+        try:
+            key, val = crit.split("=", 1)
+            key = key.lower()
+        except ValueError:
+            key = crit.lower()
+            val = None
+        if key not in dcriteria:
+            dcriteria[key] = [val]
+        else:
+            dcriteria[key].append(val)
+    return dcriteria
+
+
+def dict_to_criteria(criteria: dict) -> str:
+    """ return criteria string from dict criter/value"""
+    final_crit = []
+    for key, lval in criteria.items():
+        for val in lval:
+            if val is None:
+                final_crit.append(f'{key}')
+            else:
+                final_crit.append(f'{key}={val}')
+    return ','.join(final_crit)
+
+
 class LRSelectPhoto(LRSelectGeneric):
     '''
     Build select request for photo table Adobe_images
@@ -55,8 +91,13 @@ class LRSelectPhoto(LRSelectGeneric):
                 'basext': ['fi.baseName || "." || fi.extension AS name', [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local'] ], \
                 'basext_vc': ['fi.baseName || COALESCE(i.copyName, "") || "." || fi.extension AS name', [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local'] ], \
                 }, \
-            'vname' : { \
-                'True' : [ 'i.copyName AS vname',  None ] }, \
+            'vname' : {
+                'True' : [ 'i.copyName AS vname',  None ] },
+            'idfolder' : {
+                'True' : [
+                    'fo.id_local AS idfolder',
+                    ['LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local', 'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local', 'LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local' ],
+                    ] },
             'folder' : { \
                 'True' : \
                     [   'rf.absolutePath || fo.pathFromRoot AS folder', \
@@ -87,7 +128,7 @@ class LRSelectPhoto(LRSelectGeneric):
             'xmp' : { \
                 'True' : \
                     [   'am.xmp AS xmp', \
-                        [ 'LEFT JOIN Adobe_AdditionalMetadata am on i.id_local = am.image' ] \
+                        [ 'LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image' ] \
                     ] \
                 }, \
             'stack' : { \
@@ -119,28 +160,30 @@ class LRSelectPhoto(LRSelectGeneric):
                 }, \
             'camera' : { \
                 'True' : [ 'cm.value AS camera', \
-                        ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image',
-                        'LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef'] ] },
+                        ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image',
+                        'LEFT JOIN AgInternedExifCameraModel cm ON cm.id_local = em.cameraModelRef'] ] },
             'camerasn' : { \
                 'True' : [ 'csn.value AS camerasn', \
-                        ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image',
-                        'LEFT JOIN AgInternedExifCameraSN csn on csn.id_local = em.cameraSNRef'] ] },
+                        ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image',
+                        'LEFT JOIN AgInternedExifCameraSN csn ON csn.id_local = em.cameraSNRef'] ] },
             'lens' : { \
                 'True' : [ 'el.value AS lens', \
-                        ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image',
-                        'LEFT JOIN AgInternedExifLens el on el.id_local = em.lensRef'] ] },
+                        ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image',
+                        'LEFT JOIN AgInternedExifLens el ON el.id_local = em.lensRef'] ] },
             'iso' : { \
-                'True' : [ 'em.isoSpeedRating AS iso',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+                'True' : [ 'em.isoSpeedRating AS iso',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
             'focal' : { \
-                'True' : [ 'em.focalLength AS focal',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+                'True' : [ 'em.focalLength AS focal',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
             'aperture' : { \
-                'True' : [ 'em.aperture AS aperture',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+                'True' : [ 'em.aperture AS aperture',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
             'speed' : { \
-                'True' : [ 'em.shutterSpeed AS speed',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+                'True' : [ 'em.shutterSpeed AS speed',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
+            'orientation' : { \
+                'True' : [ 'i.orientation AS orientaton',  None ] }, \
             'monochrome' : { \
-                'True' : [ 'am.monochrome',  ['LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image'] ] }, \
+                'True' : [ 'am.monochrome AS monochrome',  ['LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image'] ] }, \
             'flash' : { \
-                'True' : [ 'em.flashFired AS flash',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+                'True' : [ 'em.flashFired AS flash',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
             'dims' : { \
                 'True' : [ '(SELECT CASE '\
                             'WHEN ids.croppedWidth <> "uncropped" AND i.orientation IN ("AB", "BA", "CD", "DC") THEN CAST(ids.croppedWidth AS int) || "x" || CAST(ids.croppedHeight AS int) '\
@@ -153,19 +196,21 @@ class LRSelectPhoto(LRSelectGeneric):
                 'True' : [ 'i.aspectRatioCache AS aspectRatio',  None ] }, \
             'creator' : { \
                 'True' : [ 'iic.value AS creator',
-                        ['LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image',\
-                         'LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local'] ] }, \
+                        ['LEFT JOIN AgHarvestedIptcMetadata im ON i.id_local = im.image',\
+                         'LEFT JOIN AgInternedIptcCreator iic ON im.creatorRef = iic.id_local'] ] }, \
             'caption' : { \
                 'True' : [ 'iptc.caption AS caption',\
-                        ['LEFT JOIN AgLibraryIPTC iptc on i.id_local = iptc.image'] ] }, \
+                        ['LEFT JOIN AgLibraryIPTC iptc ON i.id_local = iptc.image'] ] }, \
+            'hasgps' : { \
+                'True' : [ 'em.hasgps AS hasgps',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
             'latitude' : { \
-                'True' : [ 'em.GpsLatitude AS latitude',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+                'True' : [ 'em.GpsLatitude AS latitude',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
             'longitude' : { \
-                'True' : [ 'em.GpsLongitude AS longitude',  ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'] ] }, \
+                'True' : [ 'em.GpsLongitude AS longitude',  ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'] ] }, \
             'exif' : { \
                 LRSelectGeneric._VAR_FIELD: \
                     [   None,
-                        [ 'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image' ] \
+                        [ 'LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image' ] \
                     ] \
                 }, \
             'pubcollection': { \
@@ -173,10 +218,10 @@ class LRSelectPhoto(LRSelectGeneric):
                      'LEFT JOIN AgLibraryPublishedCollection pc ON pc.id_local = pci.collection', ]], \
                 },\
             'pubname' : { \
-                'True' : [ 'rm.remoteId AS pubname',  ['LEFT JOIN AgRemotePhoto rm on i.id_local = rm.photo'] ] }, \
+                'True' : [ 'rm.remoteId AS pubname',  ['LEFT JOIN AgRemotePhoto rm ON i.id_local = rm.photo'] ] }, \
             'pubtime' : { \
                 'True' : [ '(select substr(rm.url, pos+1) from (select instr(rm.url, "/") as pos)) AS pubtime', \
-                        ['LEFT JOIN AgRemotePhoto rm on i.id_local = rm.photo'] ] }, \
+                        ['LEFT JOIN AgRemotePhoto rm ON i.id_local = rm.photo'] ] }, \
             'pubposition': { \
                 'True' : ['pci.positionInCollection AS pubposition', ['LEFT JOIN AgLibraryPublishedCollectionImage pci ON pci.image = i.id_local',
                      'LEFT JOIN AgLibraryPublishedCollection pc ON pc.id_local = pci.collection', ]], \
@@ -212,6 +257,12 @@ class LRSelectPhoto(LRSelectGeneric):
                     'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
                     'UPPER(fi.extension) = "%s"'
                     ],
+                'idfolder' : [ \
+                     ['LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
+                     'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local',
+                     'LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local'],
+                    'fo.id_local = %s',
+                ],
                 'folder' : [ \
                     [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
                      'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local',
@@ -263,48 +314,52 @@ class LRSelectPhoto(LRSelectGeneric):
                     '%s', self.func_titleindex \
                     ],
                 'caption' : [ \
-                    'LEFT JOIN AgLibraryIPTC iptc on i.id_local = iptc.image', \
+                    'LEFT JOIN AgLibraryIPTC iptc ON i.id_local = iptc.image', \
                     'iptc.caption %s', self.func_like_value_or_null
                     ],
                 'creator' : [ \
-                    ['LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image', \
-                    'LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local'], \
+                    ['LEFT JOIN AgHarvestedIptcMetadata im ON i.id_local = im.image', \
+                    'LEFT JOIN AgInternedIptcCreator iic ON im.creatorRef = iic.id_local'], \
                     'iic.value LIKE "%s"',
                     ],
                 'iso' : [ \
-                    'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
+                    'LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
                     'em.isoSpeedRating %s %s', self.func_oper_value,
                     ],
                 'focal' : [ \
-                    'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
+                    'LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
                     'em.focalLength %s %s', self.func_oper_value,
                     ],
                 'aperture' : [ \
-                    'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
+                    'LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
                     'em.aperture %s', self.func_aperture,
                     ],
                 'speed' : [ \
-                    'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
+                    'LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
                     'em.shutterSpeed %s', self.func_speed,
                     ],
                 'flash' : [ \
-                    'LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
+                    'LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
                     'em.flashFired %s', self.func_value_or_null
                     ],
                 'camera' : [ \
-                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
-                    ' LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef'], \
+                    ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
+                    ' LEFT JOIN AgInternedExifCameraModel cm ON cm.id_local = em.cameraModelRef'], \
                     'cm.value LIKE "%s"',
                     ],
                 'camerasn' : [ \
-                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
-                    ' LEFT JOIN AgInternedExifCameraSN csn on csn.id_local = em.cameraSNRef'], \
+                    ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
+                    ' LEFT JOIN AgInternedExifCameraSN csn ON csn.id_local = em.cameraSNRef'], \
                     'csn.value LIKE "%s"',
                     ],
                 'lens' : [ \
-                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', \
-                    ' LEFT JOIN AgInternedExifLens el on el.id_local = em.lensRef'], \
+                    ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', \
+                    ' LEFT JOIN AgInternedExifLens el ON el.id_local = em.lensRef'], \
                     'el.value LIKE "%s"',
+                    ],
+                'orientation' : [ \
+                    '', \
+                    'i.orientation = "%s"', \
                     ],
                 # TODO: width and height criteria works on 'virtual' column dims ! So, the 'dims' column dims MUST to be included in the query
                 'width' : [ \
@@ -324,16 +379,16 @@ class LRSelectPhoto(LRSelectGeneric):
                     'am.monochrome = %s', self.func_0_1,
                     ],
                 'hasgps' : [ \
-                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'], \
+                    ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'], \
                     'em.hasGps = %s', self.func_0_1,
                     ],
                 'gps' : [ \
-                    ['LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image'], \
+                    ['LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image'], \
                     '%s', self.func_gps,
                     ],
                 'import' : [ \
-                    ['LEFT JOIN AgLibraryImportImage impim on  i.id_local = impim.image', \
-                    ' LEFT JOIN AgLibraryImport imp on impim.import = imp.id_local'], \
+                    ['LEFT JOIN AgLibraryImportImage impim ON  i.id_local = impim.image', \
+                    ' LEFT JOIN AgLibraryImport imp ON impim.import = imp.id_local'], \
                     'imp.id_local = %s',
                     ],
                 'idcollection' : [ \
@@ -346,17 +401,22 @@ class LRSelectPhoto(LRSelectGeneric):
                      'LEFT JOIN AgLibraryCollection col<NUM> ON col<NUM>.id_local = ci<NUM>.Collection'],\
                     'col<NUM>.name LIKE "%s"', \
                     ],
+                'idpubcollection' : [ \
+                    ['LEFT JOIN AgLibraryPublishedCollectionImage pci ON pci.image = i.id_local', \
+                    ' LEFT JOIN AgLibraryPublishedCollection pc ON pc.id_local = pci.collection'],\
+                    'pc.id_local = %s', \
+                    ],
                 'pubcollection' : [ \
                     ['LEFT JOIN AgLibraryPublishedCollectionImage pci ON pci.image = i.id_local',
                      'LEFT JOIN AgLibraryPublishedCollection pc ON pc.id_local = pci.collection'],\
                     '%s', self.func_published, \
                     ],
                 'pubtime' : [ \
-                    ['LEFT JOIN AgRemotePhoto rm on i.id_local = rm.photo'], \
+                    ['LEFT JOIN AgRemotePhoto rm ON i.id_local = rm.photo'], \
                     'CAST((select substr(rm.url, pos+1) from (select instr(rm.url, "/") as pos)) AS INTEGER) %s %s', self.func_oper_dateutc_to_lrstamp, \
                     ],
                 'metastatus' : [ \
-                    ['LEFT JOIN Adobe_AdditionalMetadata am on i.id_local = am.image'], \
+                    ['LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image'], \
                     '%s', self.func_metastatus, \
                     ],
                 'extfile' : [ \
@@ -366,6 +426,12 @@ class LRSelectPhoto(LRSelectGeneric):
                 'stacks' : [ \
                     'LEFT JOIN AgLibraryFolderStackImage fsi ON i.id_local = fsi.image', \
                     '%s', self.func_stacks,
+                    ],
+               'idkeyword' : [ \
+                    [   'LEFT JOIN AgLibraryKeywordImage kwi ON i.id_local = kwi.image',
+                        ' LEFT JOIN AgLibraryKeyword kw ON kw.id_local = kwi.tag'
+                    ],
+                    'kw.id_local = %s',
                     ],
                 'keyword' : [ \
                     ['LEFT JOIN AgLibraryKeywordImage kwi<NUM> ON i.id_local = kwi<NUM>.image', \
@@ -638,6 +704,7 @@ class LRSelectPhoto(LRSelectGeneric):
                 'base_vc' : base name + virtual copy name, ex: "IMG_1101 Copy 1"
                 'basext_vc': base name + virtual copy name + extension, ex: "IMG_1101 Copy 1.jpg"
                 'full_vc' :  path + base name + virtual copy name + extension, ex: "D:\\Photos\\IMG_1101 Copy 1.jpg"
+            - 'idfolder'   : folder id
             - 'folder'     : folder name
             - 'id'         : id photo (Adobe_images.id_local)
             - 'uuid'       : UUID photo (Adobe_images.id_global)
@@ -678,6 +745,7 @@ class LRSelectPhoto(LRSelectGeneric):
         criterias :
             - 'name'       : (str) filename without extension
             - 'exactname'  : (str) filename insensitive without extension
+            - 'idfolder'   : (int) folder id
             - 'folder'     : (str) folder name, with optional wildcard '%' (ex: folder=%family%)
             - 'ext'        : (str) file extension
             - 'id'         : (int) photo id (Adobe_images.id_local)
@@ -710,7 +778,8 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'videos'     : (bool) type videos
             - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
             - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
-            - 'keyword'    : (str) keyword name. Only one keyword can be specified in request
+            - 'idkeyword'  : (int) keyword id
+            - 'keyword'    : (str) keyword name.
             - 'haskeywords': (bool) photos with or without keywords
             - 'import'     : (int) import id
             - 'stacks'     : operation on stacks in :
@@ -728,6 +797,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     'unknown' = write error, phot missing ...
             - 'idcollection' : (int) collection id
             - 'collection' : (str) collection name
+            - 'idpubcollection' : (int) publish collection id
             - 'pubcollection: (str) publish collection name
             - 'pubtime     : (str) publish time,  operator (<,<=,>, >=)
             - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
