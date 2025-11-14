@@ -1,4 +1,3 @@
-#!python3
 # # -*- coding: utf-8 -*-
 # pylint: disable=line-too-long
 
@@ -20,6 +19,7 @@ class LRKeywords():
         self.rootid = None
         self.id2keyname = None
         self.hierachical_keywords = None
+        self.hkeyname2id = None
 
 
     def _init_hierarchical_keywords(self):
@@ -40,9 +40,10 @@ class LRKeywords():
                 self.tree[parent] = []
             self.tree[parent].append(pid)
 
-        # creation dictionnaire index clé vers nom hierachique
+        # dict keyword_id -> hierarchical name
         self.hierachical_keywords = self._build_hierachical_keywords()
-
+        # dict hierarchical name -> keyword_id
+        self.hkeyname2id = {v: k for k, v in self.hierachical_keywords.items()}
 
 
     def _showtree(self, pid, level):
@@ -105,6 +106,12 @@ class LRKeywords():
         if not self.hierachical_keywords:
             self._init_hierarchical_keywords()
         return self.hierachical_keywords[idkey].split('|')[-1]
+
+    def get_id(self, hkname):
+        '''
+        Return key id from hiecharchical key name
+        '''
+        return self.hkeyname2id[hkname]
 
     def all_persons(self):
         ''' Select all persons keywords '''

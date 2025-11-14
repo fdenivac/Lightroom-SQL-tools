@@ -99,18 +99,23 @@ class LRCatDB():
                 self.lrdb_version, = self.cursor.execute('SELECT value FROM Adobe_variablesTable WHERE name="Adobe_DBVersion"').fetchone()
                 log.info('LR database "%s" opened with uri "%s"', self.lrcat_file, uri)
                 log.info('Adobe_DBVersion : %s', self.lrdb_version)
-                return True
-            except sqlite3.OperationalError:
+                return (True, '')
+            except (sqlite3.OperationalError, sqlite3.DatabaseError) as _e:
                 self.conn.close()
-                return False
+                log.info('open "%s" failed : %s',  self.lrcat_file, str(_e))
+                return (False, 'Not an Lightroom catalog')
+
         self.lrcat_file = lrcat_file
         if not os.path.exists(self.lrcat_file):
             raise LRCatException('LR catalog doesn\'t exist')
-        log = logging.getLogger()
+        log = logging.getLogger(__name__)
         log.info('sqlite3 binding version : %s , sqlite3 version : %s', sqlite3.version, sqlite3.sqlite_version)
         modes = f"?{open_options if open_options else ''}"
-        if not open_db(f"file:{self.lrcat_file}{modes}"):
-            log.info('Failed to open "%s" with uri "%s"', self.lrcat_file, open_options)
+        done, reason = open_db(f"file:{self.lrcat_file}{modes}")
+        if not done:
+            if reason:
+                reason = f' reason: {reason}'
+            log.info('Failed to open "%s" with uri "%s"%s', self.lrcat_file, open_options, reason)
             raise LRCatException('Unable to open LR catalog')
         self.lrphoto = LRSelectPhoto(self)
 
@@ -246,6 +251,34 @@ class LRCatDB():
         return self.cursor.fetchall()
 
 
+    def hierarchical_collections(self):
+        '''
+        Get hierarchical collections
+
+        return list( (hierachical_name, lr_id_local, lr_creation_id) )
+        '''
+
+        id2coll = {}
+        hierachical_colls = []
+        for id_local, creationId, genealogy, name, parent in self.cursor.execute(\
+            'SELECT id_local,creationId,genealogy,name,parent FROM AgLibraryCollection WHERE '
+            '(creationId="com.adobe.ag.library.group" OR '\
+            'creationId="com.adobe.ag.library.smart_collection" OR '\
+            'creationId="com.adobe.ag.library.collection") AND '\
+            'systemOnly=0').fetchall():
+            id2coll[genealogy] = (id_local, creationId, name, parent)
+        for genealogy, (id_local, creationId, name, parent) in id2coll.items():
+            hname = []
+            parts = genealogy.split('/')[1:]
+            genkey = ''
+            for part in parts:
+                genkey += f'/{part}'
+                id_local, creationId, name, parent = id2coll[genkey]
+                hname.append(name)
+            hierachical_colls.append((hname, id_local, creationId))
+        return sorted(hierachical_colls)
+
+
     def select_collections(self, what, collname=""):
         '''
         Select collections name for standard and dynamic type)
@@ -264,6 +297,35 @@ class LRCatDB():
         self.cursor.execute(f"SELECT id_local, name, creationId FROM AgLibraryCollection WHERE {where} ORDER BY name ASC")
 
         return self.cursor.fetchall()
+
+
+    def hierarchical_published_collections(self):
+        '''
+        Get hierarchical published collections
+
+        return list( (hierachical_name, lr_id_local, lr_creation_id) )
+        '''
+
+        id2coll = {}
+        hierachical_colls = []
+        for id_local, creationId, genealogy, name, parent in self.cursor.execute(\
+            'SELECT id_local,creationId,genealogy,name,parent FROM AgLibraryPublishedCollection WHERE ('
+            'creationId="com.adobe.ag.export.service.connection" OR '\
+            'creationId="com.adobe.ag.library.collection.published.built-in" OR '\
+            'creationId="com.adobe.ag.library.group.published" OR '\
+            'creationId="com.adobe.ag.library.collection.published") AND '\
+            'systemOnly=0').fetchall():
+            id2coll[genealogy] = (id_local, creationId, name, parent)
+        for genealogy, (id_local, creationId, name, parent) in id2coll.items():
+            hname = []
+            parts = genealogy.split('/')[1:]
+            genkey = ''
+            for part in parts:
+                genkey += f'/{part}'
+                id_local, creationId, name, parent = id2coll[genkey]
+                hname.append(name)
+            hierachical_colls.append((hname, id_local, creationId))
+        return sorted(hierachical_colls)
 
 
     def select_metadatas_to_archive(self):
