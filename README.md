@@ -157,6 +157,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
                 - 'uuid'       : UUID photo (Adobe_images.id_global)
                 - 'rating'     : rating/note
                 - 'colorlabel' : color and label
+                - 'flag'       : flag (unflagged, flagged, rejected)
                 - 'datemod'    : modificaton date
                 - 'datecapt'   : capture date
                 - 'modcount'   : number of modifications
@@ -182,16 +183,23 @@ It builds an SQL SELECT query from two strings describing informations to displa
                 - 'latitude'   : GPS latitude
                 - 'longitude'  : GPS longitude
                 - 'creator'    : photo creator
+                - 'copyright'  : copyright
                 - 'caption'    : photo caption
                 - 'pubname'    : remote path and name of published photo
                 - 'pubcollection' : name of publish collection
                 - 'pubtime'    : published datetime in seconds from 2001-1-1
                 - 'pubposition': order number (float) in collection
+                - 'location'   : location name
+                - 'city'       : location city name
+                - 'country'    : location country name 
+                - 'state'      : location state name
+                - 'duration'   : video duration in seconds
                 - 'count(NAME)' : count not NULL value for column NAME (ex: "count(master)")
                 - 'countby(NAME)' : count aggregated not NULL value for column NAME
             criterias :
                 - 'name'       : (str) filename without extension
                 - 'exactname'  : (str) filename insensitive without extension
+                - 'idfolder'   : (int) folder id
                 - 'folder'     : (str) folder name, with optional wilcard '%' (ex: folder=%family%)
                 - 'ext'        : (str) file extension
                 - 'id'         : (int) photo id (Adobe_images.id_local)
@@ -200,6 +208,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
                 - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
                 - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
                 - 'creator'    : (str) photo creator, with optional wilcard '%'
+                - 'copyright"  : (str) photo copyright with optional wildcard '%'
                 - 'caption'    : (true/false/str) photo caption, with optional wilcard '%'
                 - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
                 - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
@@ -224,6 +233,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
                 - 'videos'     : (bool) type videos
                 - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
                 - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
+                - 'idkeyword'    : (int) keyword name. Only one keyword can be specified in requestid
                 - 'keyword'    : (str) keyword name. Only one keyword can be specified in request
                 - 'haskeywords': (bool) photos with or without keywords
                 - 'import'     : (int) import id
@@ -242,6 +252,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
                         'unknown' = write error, phot missing ...
                 - 'idcollection' : (int) collection id
                 - 'collection' : (str) collection name
+                - 'idpubcollection: (int) publish collection id
                 - 'pubcollection: (str) publish collection name
                 - 'pubtime     : (str) publish time,  operator (<,<=,>, >=)
                 - 'extfile'    : (str) has external file with <value> extension as jpg,xmp... (field AgLibraryFile.sidecarExtensions)
@@ -329,6 +340,7 @@ Unfortunately :
 * filename
 * flashFired
 * focalLength
+* folder
 * hasAdjustments
 * hadsGPSData
 * heightCropped

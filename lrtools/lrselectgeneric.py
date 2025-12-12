@@ -358,13 +358,13 @@ class LRSelectGeneric():
         '''
 
         def _finalize(sql):
-            log.info('SQL = %s', sql)
             if kwargs.get('debug') or kwargs.get('print'):
                 print('SQL =', sql)
             if kwargs.get('print'):
                 return None
             if kwargs.get('sql'):
                 return sql
+            log.info('SQL = %s', sql)
             self.lrdb.cursor.execute(sql)
             # retrieve columns names as detected by sqlite
             self.sql_column_names = [d[0] for d in self.lrdb.cursor.description]

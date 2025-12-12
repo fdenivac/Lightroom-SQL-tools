@@ -18,4 +18,4 @@ env_tz = os.getenv("TZ")    # exists on cygwin and cause exception on tzlocal.ge
 localzone = pytz.timezone(env_tz) if env_tz else get_localzone()
 utczone = pytz.utc
 
-VERSION = "2025-11-14"
+VERSION = "2025-12-12"

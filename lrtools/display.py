@@ -75,6 +75,36 @@ def display_lrtimestamp(value):
     utc = pytz.utc.localize(datetime(2001, 1, 1, 0, 0, 0) + timedelta(seconds=float(value)))
     return utc.astimezone(localzone).strftime("%Y-%m-%d %H:%M:%S")
 
+def display_duration(value):
+    ''' format video duration '''
+    num, den = value.split('/')
+    return seconds_tostring(int(num, 16) / int(den, 16), fract=1)
+
+def display_flag(value):
+    ''' format flag (pick) value'''
+    dflags = {0: 'unflagged', 1: 'flagged', -1: 'rejected'}
+    return dflags[int(value)]
+
+def seconds_tostring(seconds, **kwargs):
+    """
+    convert seconds to string
+    format returned :
+        [H:]MM:SS[.pp]
+    kwargs :
+        fract : control decimals number
+    """
+    stime = []
+    seconds = float(seconds)
+    if seconds // 3600 > 0:
+        stime.append(f"{int(seconds // 3600)}:")
+    stime.append(f"{int((seconds // 60) % 60):02}:")
+    stime.append(f"{int(seconds % 60):02}")
+    if kwargs.get("fract", 0):
+        fmt = f"%.{kwargs.get('fract', 0)}f"
+        fract = fmt % (seconds % 1)
+        fract = fract[1:]
+        stime.append(fract)
+    return "".join(stime)
 
 
 #
@@ -90,6 +120,7 @@ DEFAULT_SPECS = {
     'uuid'      : ('%38s', None),
     'rating'    : ('%1s', None),
     'colorlabel': ('%8s', None),
+    'flag'      : ('%6s', display_flag),
     'datemod'   : ('%19s', display_lrtimestamp),
     'datehist'  : ('%19s', display_lrtimestamp),
     'datecapt'  : ('%19s', display_date),
@@ -116,6 +147,7 @@ DEFAULT_SPECS = {
     'pubtime'   : ('%19s', display_lrtimestamp),
     'latitude'  : ('%-18s', None),
     'longitude' : ('%-18s', None),
+    'duration'  : ('%5s', display_duration),
     'filesize'  : ('%8s', None),            # pseudo column
 }
 DEFAULT_SEPARATOR = ' | '

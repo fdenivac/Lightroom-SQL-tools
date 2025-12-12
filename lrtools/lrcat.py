@@ -18,6 +18,7 @@ from .lrtoolconfig import lrt_config
 
 from .slpp import SLPP
 
+log = logging.getLogger(__name__)
 
 
 def date_to_lrstamp(mydate, localtz=True):
@@ -108,7 +109,6 @@ class LRCatDB():
         self.lrcat_file = lrcat_file
         if not os.path.exists(self.lrcat_file):
             raise LRCatException('LR catalog doesn\'t exist')
-        log = logging.getLogger(__name__)
         log.info('sqlite3 binding version : %s , sqlite3 version : %s', sqlite3.version, sqlite3.sqlite_version)
         modes = f"?{open_options if open_options else ''}"
         done, reason = open_db(f"file:{self.lrcat_file}{modes}")
@@ -243,8 +243,8 @@ class LRCatDB():
                 f' FROM Adobe_images WHERE captureTime >= "{date_start}" AND captureTime <= "{date_end}" GROUP BY DATE(captureTime, "start of year")'
             )
         else:
-            print("BUG")
-            sys.exit(0)
+            log.error("BUG select_count_by_date")
+            sql = ''
         if kwargs.get('sql'):
             return sql
         self.cursor.execute(sql)
