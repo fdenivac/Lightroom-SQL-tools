@@ -7,13 +7,15 @@ SQLSmartColl Class for Lightroom Smart Collection manipulations
 
 
 '''
+import logging
 from datetime import datetime, timedelta
 
-from .lrselectgeneric import date_to_lrstamp
+from . import TIMESTAMP_LRBASE
 from .lrkeyword import LRKeywords
 from .lrselectcollection import LRSelectCollection
 from .slpp import SLPP
 
+log = logging.getLogger(__name__)
 
 class SmartException(Exception):
     ''' SQLSmartColl Exception '''
@@ -36,6 +38,7 @@ class SQLSmartColl():
         filename
         flashFired
         focalLength
+        folder
         hasAdjustments
         hadsGPSData
         iptc
@@ -60,7 +63,7 @@ class SQLSmartColl():
                 ' ELSE CAST(i.filewidth AS int) || "x" || CAST(i.fileHeight AS int) END) AS dims '
 
 
-    def __init__(self, lrdb, smart, verbose=False):
+    def __init__(self, lrdb, smart):
         '''
         Initialize from :
         - lrdb : LRCatDB instance
@@ -84,7 +87,6 @@ class SQLSmartColl():
         '''
         self.lrdb = lrdb
         self.smart = smart
-        self.verbose = verbose
         # will be set latter
         self.base_sql_select = self.base_select = self.base_sql = self.sql = self.func = self.joins = ''
 
@@ -118,7 +120,9 @@ class SQLSmartColl():
                 f'CAST(substr(dims, 1, instr(dims, "x")-1) AS int) {self.func["operation"]} {self.func["value"]}',
             )
         _parts = _sql.split(' FROM ')
-        _parts[0] += self._SELECT_DIMS
+        if 'dims' not in self.base_select:
+            raise SmartException('This smart collection needs "dims" columns')
+        # _parts[0] += self._SELECT_DIMS
         self.sql += ' FROM '.join(_parts)
 
 
@@ -138,7 +142,9 @@ class SQLSmartColl():
                 f'CAST(substr(dims, instr(dims, "x")+1) AS int) {self.func["operation"]} {self.func["value"]}',
             )
         _parts = _sql.split(' FROM ')
-        _parts[0] += self._SELECT_DIMS
+        if 'dims' not in self.base_select:
+            raise SmartException('This smart collection needs "dims" columns')
+        # _parts[0] += self._SELECT_DIMS
         self.sql += ' FROM '.join(_parts)
 
 
@@ -158,19 +164,27 @@ class SQLSmartColl():
 
     def criteria_touchTime(self):
         ''' criteria touchTime '''
-        # convert and shift of 24 hours for end of day
-        touchtime1 = date_to_lrstamp(self.func['value'] + (24 * 3600))
-        touchtime2 = date_to_lrstamp(self.func['value2']) + (24 * 3600) if 'value2' in self.func else 0
+        db_touchtime = f'date(i.touchTime + {TIMESTAMP_LRBASE}, "unixepoch")'
         if self.func['operation'] == 'in':
-            self.sql += self._complete_sql('', f" WHERE i.touchTime >= {touchtime1} AND  i.touchTime <= {touchtime2}")
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} >= "{self.func["value"]}" AND {db_touchtime} <= "{self.func["value2"]}"')
         elif self.func['operation'] == 'inLast':
-            self.sql += self._complete_sql('', f' WHERE i.touchTime >= date("now", "-{self.func["value"]} {self.func["_units"]}")')
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} >= date("now", "-{self.func["value"]} {self.func["_units"]}")')
         elif self.func['operation'] == '<':
-            self.sql += self._complete_sql('', f" WHERE i.touchTime < {touchtime1} AND  i.touchTime > 0")
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} < "{self.func["value"]}" AND  i.touchTime > 0')
         elif self.func['operation'] in ['==', '!=', '>']:
-            self.sql += self._complete_sql('', f' WHERE i.touchTime {self.func["operation"]} {touchtime1}')
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} {self.func["operation"]} "{self.func["value"]}"')
+        elif self.func['operation'] == 'thisYear':
+            self.sql += self._complete_sql('', f' WHERE date(i.touchTime + {TIMESTAMP_LRBASE}, "unixepoch", "start of year") = date("now","start of year")')
+        elif self.func['operation'] == 'today':
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} = date("now")')
+        elif self.func['operation'] == 'yesterday':
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} = date("now", "-1 day")')
+        elif self.func['operation'] == 'thisWeek':
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} >= date("now", "-6 day")')
+        elif self.func['operation'] == 'thisMonth':
+            self.sql += self._complete_sql('', f' WHERE {db_touchtime} >= date("now", "-1 month")')
         else:
-            raise SmartException(f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}')
+            raise SmartException(f'operation unsupported: "{self.func["operation"]}" on criteria "{self.func["criteria"]}"')
 
 
     def criteria_filename(self):
@@ -211,7 +225,7 @@ class SQLSmartColl():
     def criteria_keywords(self):
         ''' criteria keyword '''
         _base_sql = self.lrdb.lrphoto.select_generic(self.base_select, 'keyword', distinct=True, sql=True)
-        _base_sql = _base_sql[:_base_sql.find(' WHERE ')]
+        _base_sql = _base_sql[:_base_sql.rfind(' WHERE ')]
         if self.func['operation'] == 'noneOf':
             lrk = LRKeywords(self.lrdb)
             indexes = list()
@@ -305,8 +319,8 @@ class SQLSmartColl():
             column = 'cm.value'
         else:
             column = 'cm.searchIndex'
-        self.build_string_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image ' \
-                                'LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef',\
+        self.build_string_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image ' \
+                                'LEFT JOIN AgInternedExifCameraModel cm ON cm.id_local = em.cameraModelRef',\
                                 column)
 
 
@@ -318,19 +332,19 @@ class SQLSmartColl():
             column = 'el.value'
         else:
             column = 'el.searchIndex'
-        self.build_string_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image ' \
-                                'LEFT JOIN AgInternedExifLens el on el.id_local = em.lensRef',\
+        self.build_string_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image ' \
+                                'LEFT JOIN AgInternedExifLens el ON el.id_local = em.lensRef',\
                                 column)
 
 
     def criteria_isoSpeedRating(self):
         ''' criteria iso '''
-        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', 'em.isoSpeedRating')
+        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', 'em.isoSpeedRating')
 
 
     def criteria_focalLength(self):
         ''' criteria focal length '''
-        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', 'em.focalLength')
+        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', 'em.focalLength')
 
 
     def criteria_aperture(self):
@@ -344,7 +358,7 @@ class SQLSmartColl():
             ...
             f/8     : 6
         '''
-        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', 'em.aperture')
+        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', 'em.aperture')
 
     def criteria_shutterSpeed(self):
         '''
@@ -360,16 +374,16 @@ class SQLSmartColl():
             self.func['operation'] = self.func['operation'].replace('>', '<')
         elif '<' in self.func['operation']:
             self.func['operation'] = self.func['operation'].replace('<', '>')
-        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', 'em.shutterSpeed')
+        self.build_numeric_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', 'em.shutterSpeed')
 
     def criteria_hasGPSData(self):
         ''' criteria GPS'''
-        self.build_boolean_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', 'em.hasGps')
+        self.build_boolean_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', 'em.hasGps')
 
 
     def criteria_flashFired(self):
         ''' criteria flash fired '''
-        self.build_boolean_value('LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image', 'em.flashFired')
+        self.build_boolean_value('LEFT JOIN AgHarvestedExifMetadata em ON i.id_local = em.image', 'em.flashFired')
 
 
     def criteria_exif(self):
@@ -399,10 +413,10 @@ class SQLSmartColl():
                 ' LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local ',\
                 ' LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local ',\
                 ' LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local ', \
-                ' LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image ',\
-                ' LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local ',\
-                ' LEFT JOIN AgLibraryIptc liptc on liptc.image = i.id_local ',\
-                ' LEFT JOIN AgSourceColorProfileConstants scpc on scpc.image = i.id_local',\
+                ' LEFT JOIN AgHarvestedIptcMetadata im ON i.id_local = im.image ',\
+                ' LEFT JOIN AgInternedIptcCreator iic ON im.creatorRef = iic.id_local ',\
+                ' LEFT JOIN AgLibraryIptc liptc ON liptc.image = i.id_local ',\
+                ' LEFT JOIN AgSourceColorProfileConstants scpc ON scpc.image = i.id_local',\
                 ]
         for num_value, value in enumerate(self.func['value'].split()):
             indexes = lrk.hierachical_indexes(value, self.func['operation'])
@@ -465,7 +479,7 @@ class SQLSmartColl():
         criteria metadata status
         '''
         self.base_sql_select = self._add_joins_from_select(self.lrdb.lrphoto.select_generic(self.base_select, '', distinct=True, sql=True))
-        self._add_joins(['LEFT JOIN Adobe_AdditionalMetadata am on i.id_local = am.image'])
+        self._add_joins(['LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image'])
         if self.func['value'] == 'unknown':
             where = 'am.externalXmpIsDirty=0 and i.sidecarStatus = 2.0'
         elif self.func['value'] == 'changedOnDisk':
@@ -485,9 +499,22 @@ class SQLSmartColl():
         '''
         criteria creator
         '''
-        self.build_string_value('LEFT JOIN AgHarvestedIptcMetadata im on i.id_local = im.image ' \
-                    'LEFT JOIN AgInternedIptcCreator iic on im.creatorRef = iic.id_local',\
+        self.build_string_value('LEFT JOIN AgHarvestedIptcMetadata im ON i.id_local = im.image ' \
+                    'LEFT JOIN AgInternedIptcCreator iic ON im.creatorRef = iic.id_local',\
                     'iic.value')
+
+    def criteria_folder(self):
+        '''
+        criteria folder
+        '''
+        self.build_string_value('LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local ' \
+                    'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local ' \
+                    'LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local ',\
+                    'rf.absolutePath || fo.pathFromRoot')
+                    # [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
+                    #  'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local',
+                    #  'LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local'],
+                    # 'UPPER(rf.absolutePath || fo.pathFromRoot) LIKE "%s"',
 
 
     def build_string_value(self, tables_join, where_column):
@@ -516,16 +543,18 @@ class SQLSmartColl():
             self.func['value'] = self.func['value'].lower().replace('+', ' +')
             values = self.func['value'].split()
         for value in values:
-            if value[0] == '+':      # force AND
+            if not value:
+                print("TODEBUG")
+            if value and value[0] == '+':      # force AND
                 _sql += ' AND '
                 value = value[1:]
             elif _sql:
                 _sql += f' {combine} '   # "AND" or "OR"
             modifier = ''
-            if value[0] == '!':
+            if value and value[0] == '!':
                 modifier = 'NOT'
                 value = value[1:]
-            _sql += f' {where_column} {modifier} {test} {what % value}'
+            _sql += f' {where_column} {modifier} {test} {what % value} COLLATE NOCASE'
         self.sql += self._complete_sql(tables_join, f' WHERE {_sql}')
 
 
@@ -568,9 +597,8 @@ class SQLSmartColl():
             wheres.append(base_where % (num_value, value))
         # the base 'select columns from' :
         _sql = self.lrdb.lrphoto.select_generic(self.base_select, '', distinct=True, sql=True)
-        ijoin = _sql.find('WHERE ')
         # final sql
-        self.sql += ''.join([_sql[:ijoin]] + joins + wheres)
+        self.sql += ''.join([_sql] + joins + wheres)
 
 
 
@@ -642,8 +670,7 @@ class SQLSmartColl():
                     raise SmartException(f'"combine" operation unsupported: {self.smart["combine"]}')
 
             self.func = self.smart[fid]
-            if self.verbose:
-                print('    FUNC', fid, self.func)
+            log.info('func %s : %s',fid, self.func )
 
             # build criteria function name ...
             try:
@@ -677,7 +704,6 @@ def select_smart(lrdb, smart_name, columns, is_file=False, sql_only=False):
     if is_file:
         smart = open(smart_name, 'r', encoding='utf-8').read()
         smart = smart[smart.find('{'):]
-        # smart = smart[4:]
         lua = SLPP()
         smart = lua.decode(smart)
         if not smart or 'value' not in smart:
@@ -686,16 +712,18 @@ def select_smart(lrdb, smart_name, columns, is_file=False, sql_only=False):
             smart_title = smart['title']
         else:
             smart_title = smart_name
-        print(f' * Collection name : "{smart_title}"')
+        log.info('smart name : %s', smart_title)
         smart = smart['value']
 
     else:
         smart = lrdb.get_smartcoll_data(smart_name)
         if not smart:
             raise SmartException(f'smart collection "{smart_name}" not found')
+        log.info(smart)
 
     builder = SQLSmartColl(lrdb, smart)
     sql = builder.build_sql(columns)
+    log.info("smart sql: %s", sql)
     if sql_only:
         return sql
     lrdb.cursor.execute(sql)

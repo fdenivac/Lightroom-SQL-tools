@@ -5,7 +5,9 @@ from old version of project https://github.com/SirAnthony/slpp
 '''
 
 import re
+import logging
 
+log = logging.getLogger(__name__)
 
 class SLPP:
 
@@ -103,7 +105,7 @@ class SLPP:
                     return str(s)
                 else:
                     s += self.ch
-        print("Unexpected end of string while parsing Lua string")
+        log.error("Unexpected end of string while parsing Lua string")
 
     def object(self):
         o = {}
@@ -152,7 +154,7 @@ class SLPP:
                         o[idx] = k
                         idx += 1
                         k = ''
-        print("Unexpected end of table while parsing Lua string.")#Bad exit here
+        log.error("Unexpected end of table while parsing Lua string.")#Bad exit here
 
     def word(self):
         s = ''
@@ -175,7 +177,7 @@ class SLPP:
             n = '-'
             self.next_chr()
             if not self.ch or not self.ch.isdigit():
-                print("Malformed number (no digits after initial minus)")
+                log.error("Malformed number (no digits after initial minus)")
                 return 0
         while self.ch and self.ch.isdigit():
             n += self.ch
@@ -185,7 +187,7 @@ class SLPP:
             flt = True
             self.next_chr()
             if not self.ch or not self.ch.isdigit():
-                print("Malformed number (no digits after decimal point)")
+                log.error("Malformed number (no digits after decimal point)")
                 return n+'0'
             else:
                 n += self.ch
