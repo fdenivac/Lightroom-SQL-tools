@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines,line-too-long,invalid-name, missing-class-docstring, missing-function-docstring
-'''
+"""
 from old version of project https://github.com/SirAnthony/slpp
-'''
+"""
 
 import re
 import logging
 
 log = logging.getLogger(__name__)
 
-class SLPP:
 
+class SLPP:
     def __init__(self):
-        self.text = ''
-        self.ch = ''
+        self.text = ""
+        self.ch = ""
         self.at = 0
         self.len = 0
         self.depth = 0
 
     def decode(self, text):
-        if not text or type(text).__name__ != 'str':
+        if not text or type(text).__name__ != "str":
             return
-        text = re.sub('---.*$', '', text, 0, re.M)
+        text = re.sub("---.*$", "", text, 0, re.M)
         self.text = text
-        self.at, self.ch, self.depth = 0, '', 0
+        self.at, self.ch, self.depth = 0, "", 0
         self.len = len(text)
         self.next_chr()
         result = self.value()
@@ -38,40 +38,51 @@ class SLPP:
         return self.__encode(obj)
 
     def __encode(self, obj):
-        s = ''
-        tab = '\t'
-        newline = '\n'
+        s = ""
+        tab = "\t"
+        newline = "\n"
         tp = type(obj).__name__
-        if tp == 'str':
-            s += '"'+obj+'"'
-        elif tp == 'int' or tp == 'float' or tp == 'long' or tp == 'complex':
+        if tp == "str":
+            s += '"' + obj + '"'
+        elif tp == "int" or tp == "float" or tp == "long" or tp == "complex":
             s += str(obj)
-        elif tp == 'bool':
+        elif tp == "bool":
             s += str(obj).lower()
-        elif tp == 'list' or tp == 'tuple':
+        elif tp == "list" or tp == "tuple":
             s += "{" + newline
             self.depth += 1
             for el in obj:
-                s += tab * self.depth + self.__encode(el) + ',' + newline
+                s += tab * self.depth + self.__encode(el) + "," + newline
             self.depth -= 1
             s += tab * self.depth + "}"
-        elif tp == 'dict':
+        elif tp == "dict":
             s += "{" + newline
             self.depth += 1
             for key in obj:
-                #TODO: lua cannot into number keys. Add check.
-                if type(key).__name__ == 'int':
-                    s += tab * self.depth + self.__encode(obj[key]) + ',' + newline
+                # TODO: lua cannot into number keys. Add check.
+                if type(key).__name__ == "int":
+                    s += (
+                        tab * self.depth
+                        + self.__encode(obj[key])
+                        + ","
+                        + newline
+                    )
                 else:
-                    s += tab * self.depth + key + ' = ' + self.__encode(obj[key]) + ',' + newline
+                    s += (
+                        tab * self.depth
+                        + key
+                        + " = "
+                        + self.__encode(obj[key])
+                        + ","
+                        + newline
+                    )
             self.depth -= 1
             s += tab * self.depth + "}"
         return s
 
-
     def white(self):
         while self.ch:
-            if self.ch == ' ' or self.ch == '\t':
+            if self.ch == " " or self.ch == "\t":
                 self.next_chr()
             else:
                 break
@@ -86,18 +97,18 @@ class SLPP:
 
     def value(self):
         self.white()
-        if not self.ch or self.ch == '':
+        if not self.ch or self.ch == "":
             return
-        if self.ch == '{':
+        if self.ch == "{":
             return self.object()
         if self.ch == '"':
             return self.string()
-        if self.ch.isdigit() or self.ch == '-':
+        if self.ch.isdigit() or self.ch == "-":
             return self.number()
         return self.word()
 
     def string(self):
-        s = ''
+        s = ""
         if self.ch == '"':
             while self.next_chr():
                 if self.ch == '"':
@@ -109,72 +120,77 @@ class SLPP:
 
     def object(self):
         o = {}
-        k = ''
+        k = ""
         idx = 0
         self.depth += 1
         self.next_chr()
         self.white()
-        if self.ch and self.ch == '}':
+        if self.ch and self.ch == "}":
             self.depth -= 1
             self.next_chr()
-            return o #Exit here
+            return o  # Exit here
         else:
             while self.ch:
                 self.white()
-                if self.ch == '{':
+                if self.ch == "{":
                     o[idx] = self.object()
                     idx += 1
                     continue
-                elif self.ch == '}':
+                elif self.ch == "}":
                     self.depth -= 1
                     self.next_chr()
                     if k:
                         o[idx] = k
-                    if len([ key for key in o if type(key).__name__ == 'str' ]) == 0:
+                    if (
+                        len([key for key in o if type(key).__name__ == "str"])
+                        == 0
+                    ):
                         ar = []
                         for key, val in o.items():
                             ar.insert(key, val)
                         o = ar
-                    return o #or here
+                    return o  # or here
                 else:
                     if self.ch == '"':
                         k = self.string()
                     else:
                         k = self.value()
                     self.white()
-                    if self.ch == '=':
+                    if self.ch == "=":
                         self.next_chr()
                         self.white()
                         o[k] = self.value()
                         idx += 1
-                        k = ''
-                    elif self.ch == ',':
+                        k = ""
+                    elif self.ch == ",":
                         self.next_chr()
                         self.white()
                         o[idx] = k
                         idx += 1
-                        k = ''
-        log.error("Unexpected end of table while parsing Lua string.")#Bad exit here
+                        k = ""
+        log.error(
+            "Unexpected end of table while parsing Lua string."
+        )  # Bad exit here
 
     def word(self):
-        s = ''
-        if self.ch != '\n':
+        s = ""
+        if self.ch != "\n":
             s = self.ch
         while self.next_chr():
             if self.ch.isalnum():
                 s += self.ch
             else:
-                if re.match('^true$', s, re.I):
+                if re.match("^true$", s, re.I):
                     return True
-                elif re.match('^false$', s, re.I):
+                elif re.match("^false$", s, re.I):
                     return False
                 return str(s)
 
     def number(self):
-        n = ''
+        n = ""
         flt = False
-        if self.ch == '-':
-            n = '-'
+        if self.ch == "-":
+            n = "-"
             self.next_chr()
             if not self.ch or not self.ch.isdigit():
                 log.error("Malformed number (no digits after initial minus)")
@@ -182,13 +198,13 @@ class SLPP:
         while self.ch and self.ch.isdigit():
             n += self.ch
             self.next_chr()
-        if self.ch and self.ch == '.':
+        if self.ch and self.ch == ".":
             n += self.ch
             flt = True
             self.next_chr()
             if not self.ch or not self.ch.isdigit():
                 log.error("Malformed number (no digits after decimal point)")
-                return n+'0'
+                return n + "0"
             else:
                 n += self.ch
             while self.ch and self.ch.isdigit():
