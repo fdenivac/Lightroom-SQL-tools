@@ -862,10 +862,10 @@ class LRSelectPhoto(LRSelectGeneric):
         re_2gps = re.compile(
             r"([\d\-\.]+);([\d\-\.]+)/([\d\-\.]+);([\d\-\.]+)"
         )  # 45.78;-2.51/46.01;1.05
-        re_townw = re.compile(r"([\w\'\ -;]+)\+([\d\.]+)")  # paris+50
-        re_2town = re.compile(r"([\w\'\ -]+)/([\w\'\ -]+)")  # paris/geneve
+        re_townw = re.compile(r"([\w\' -;]+)\+([\d\.]+)")  # paris+50
+        re_2town = re.compile(r"([\w\' -]+)/([\w\' -]+)")  # paris/geneve
         re_photo = re.compile(
-            r"photo:([\w\'\ _-]+)\+([\d\.]+)"
+            r"photo:([\w\' _-]+)\+([\d\.]+)"
         )  # photo_000151+2 (2km around photo)
 
         if re_photo.match(value):
