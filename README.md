@@ -75,7 +75,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
 * photos taken around Paris, with camera RX100, between May and August 2018, and modified in Lightroom since August 2019:
 
         lrselect.py "name, focal, speed, aperture, keywords" "gps=paris+10, camera=%rx100%, datecapt=>=1-5-2018, datecapt=<=1-7-2018, datemod=>=1-8-2019"
-        * Photo results (2 photos) :
+        * Results (2 entries) :
             name                 | focal |  speed  | apert | keywords
             ===========================================================
             RX100_01399.tif      |  10.89 |  1/160 |  F5.6 | family,paris
@@ -84,7 +84,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
 * photos with specific name, iso > 1600, focal > 200mm and aperture > F/8 :
 
         lrselect.py "name,datecapt,iso,focal,aperture,speed,lens" "name=D7K_%,iso=>=1600,focal=>=200,aperture=>8" --max_lines 2
-        * Photo results (first 2 photos on 8) :
+        * Results (first 2 entries of 8) :
             name                 |            datecapt |   iso |  focal | apert |  speed | lens
             ===========================================================================================================
             D7K_01977.JPG        | 2013-09-04T15:55:01 |  1600 |  280.0 | F20.0 |  1/500 | 55.0-300.0 mm f/4.5-5.6
@@ -94,7 +94,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
 
         lrselect.py  "camera,lens"  "camera=nikon D8%, lens=%70%, distinct, sort=-1" --results --sql
         * SQL query =  SELECT DISTINCT  cm.value, el.value FROM Adobe_images i LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image LEFT JOIN AgInternedExifCameraModel cm on cm.id_local = em.cameraModelRef LEFT JOIN AgInternedExifLens el on el.id_local = em.lensRef WHERE cm.value LIKE "nikon D8%" AND el.value LIKE "%70%" ORDER BY 1 ASC
-        * Photo results (2 photos) :
+        * Results (2 entries) :
             camera          | lens
             ==============================================
             NIKON D80       | 17.0-70.0 mm f/2.8-4.0
@@ -103,7 +103,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
 * list of Canon cameras used :
 
         lrselect.py "camera" "camera=canon%, distinct" -r
-        * Photo results (4 photos) :
+        * Results (4 entries) :
             camera
             =====================
             Canon PowerShot G2
@@ -122,7 +122,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
 * duplicates photo name (name with virtual copies)
 
         lrselect.py "name=basext_vc, countby(name=basext_vc)", "count=name>1" -r
-        * Photo results (2 photos) :
+        * Results (2 entries) :
             name=b | countb
             ===============
             IMG_102.jpg |      2
@@ -381,7 +381,7 @@ Unfortunately :
                 combine = intersect
            * SQL query:  SELECT DISTINCT  fi.baseName || "." || fi.extension AS name, i.captureTime AS datecapt FROM Adobe_images i LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local  LEFT JOIN  AgLibraryCollectionimage ci0 ON ci0.image = i.id_local LEFT JOIN AgLibraryCollection col0 ON col0.id_local = ci0.Collection WHERE col0.name LIKE "Holidays%" INTERSECT SELECT  fi.baseName || "." || fi.extension AS name, i.captureTime AS datecapt FROM Adobe_images i  JOIN AgLibraryFile fi ON i.rootFile = fi.id_local LEFT JOIN AgHarvestedExifMetadata em on i.id_local = em.image  WHERE em.hasGps == 0
            * Count results: 1880
-           * Photo results (first 2 photos on 1880) :
+           * Results (first 2 entries of 1880) :
              name                 |            datecapt
              =============================================
              103-0332_IMG.JPG     | 2002-03-07T17:53:03
