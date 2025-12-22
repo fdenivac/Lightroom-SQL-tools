@@ -154,6 +154,7 @@ class LRSelectGeneric:
 
     def func_oper_dateutc_to_lrstamp(self, value):
         """value is a lightrom timestamp"""
+        oper = None
         for index, char in enumerate(value):
             if char.isnumeric():
                 oper = value[:index]
@@ -230,8 +231,8 @@ class LRSelectGeneric:
         pairs = list()
         if not strlist:
             return pairs
-        try:
-            for keyval in strlist.split(","):
+        for keyval in strlist.split(","):
+            try:
                 if not keyval:
                     continue  # skip double commas
                 keyval = keyval.strip()
@@ -249,10 +250,10 @@ class LRSelectGeneric:
                     else:
                         raise LRSelectException(f"No value after = on {keyval}")
                 pairs.append({_k: _v})
-        except Exception as _e:
-            raise LRSelectException(
-                f"Invalid key/value syntax ({keyval} in {strlist})"
-            ) from _e
+            except Exception as _e:
+                raise LRSelectException(
+                    f"Invalid key/value syntax ({keyval} in {strlist})"
+                ) from _e
         return pairs
 
     def _add_from(self, sql, froms):
@@ -417,11 +418,11 @@ class LRSelectGeneric:
                 raise LRSelectException(f'Invalid Token : "{token}"')
             key, value = data
             value = self.remove_quotes(value)
-            if not key in nb_wheres:
+            if key not in nb_wheres:
                 nb_wheres[key] = 1
             else:
                 nb_wheres[key] += 1
-            if not key in self.criteria_description:
+            if key not in self.criteria_description:
                 raise LRSelectException(f'No existent criterion "{key}"')
             criter_desc = self.criteria_description[key]
             if len(criter_desc) == 2:

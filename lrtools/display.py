@@ -29,7 +29,8 @@ def smart_unit(value, unit):
     if value > 1000 * 1000:
         return f"{(value / (1000 * 1000.0)):.2f} M{unit}"
     if value > 1000:
-        return f"{(value / (1000.0)):.2f} K{unit}"
+        return f"{(value / 1000.0):.2f} K{unit}"
+    return f"{value:.2f} {unit}"
 
 
 #
@@ -46,7 +47,7 @@ def display_keywords(value):
 
 def display_aperture(value):
     """format aperture in F value"""
-    return f"F{2**((float(value)/2)):.1f}"
+    return f"F{2**(float(value)/2):.1f}"
 
 
 def display_iso(value):

@@ -156,7 +156,7 @@ class LRKeywords:
 
     def hierachical_indexes(self, key_part, operation):
         """
-        Find keywords containing key_part, and returns all keyword indexes hierachically under theses keywords
+        Find keywords containing key_part, and returns all keyword indexes hierachically under these keywords
         - key_part : (str) keyword or part of keyword without joker '%'
         - operation : operation of smart function. Can be: all, any, noneOf, words, beginsWith, endsWith
             * words : find complete word in keywords (ex: key_part="sport", returns "sport", "professional sport" , but not "sporting", "transport")

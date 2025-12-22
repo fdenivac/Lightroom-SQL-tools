@@ -9,8 +9,7 @@ Configuration for LRTool
 
 import sys
 import os
-from configparser import ConfigParser, Error
-from dateutil import parser as dateparser
+from configparser import ConfigParser
 
 
 class Singleton(type):
@@ -93,7 +92,7 @@ class LRToolConfig(metaclass=Singleton):
             self.dayfirst = parser.getboolean(CONFIG_MAIN, "DayFirst")
             self.geocoder = parser.get(CONFIG_MAIN, "GeoCoder")
 
-        except Error as _e:
+        except Exception as _e:
             raise LRConfigException(
                 f'Failed to read config file "{filename}"'
             ) from _e
