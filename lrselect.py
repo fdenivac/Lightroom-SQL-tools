@@ -13,7 +13,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import sqlite3
 
-from lrtools import VERSION as lr_version
+from lrtools import VERSION as LR_VERSION
 
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config, LRConfigException
@@ -150,7 +150,7 @@ def main():
 
     if args.version:
         print(
-            f"lrselect version : {lr_version} , using python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            f"lrselect version : {LR_VERSION} , using python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
         )
         return
 
@@ -164,7 +164,7 @@ def main():
         handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
         log.addHandler(handler)
     log.info("lrselect start")
-    log.info("lrtools version : %s", lr_version)
+    log.info("lrtools version : %s", LR_VERSION)
     log.info("arguments: %s", " ".join(sys.argv[1:]))
 
     # --max_lines option implies --results
@@ -181,9 +181,9 @@ def main():
     if "filesize" in columns:
         args.filesize = True
     if args.filesize:
-        if not "filesize" in columns:
+        if "filesize" not in columns:
             columns.append("filesize")
-        if not "name=full" in columns:
+        if "name=full" not in columns:
             columns.append("name=full")
     columns_lr = list(columns)
     if "filesize" in columns_lr:

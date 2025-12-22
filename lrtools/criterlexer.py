@@ -56,7 +56,7 @@ class CriterLexer:
                 # regex return quote type ("') and string
                 value = _m.group(2)
             else:
-                _m = re.match(r" *([^,\|\)\()]+)", self.criters)
+                _m = re.match(r" *([^,\|\)\(]+)", self.criters)
                 if _m:
                     value = _m.group(1)
                 else:
@@ -150,7 +150,7 @@ class CriterLexer:
         par_level = 0
         for token, _ in self.tokens:
             allowed_tokens = self.RULES_FOLLOW[prev_token]
-            if not token in allowed_tokens:
+            if token not in allowed_tokens:
                 self.last_error = f'"{token}" not allowed after "{prev_token}"'
                 return False
             if token == "LPAR":

@@ -20,7 +20,7 @@ class SLPP:
 
     def decode(self, text):
         if not text or type(text).__name__ != "str":
-            return
+            return None
         text = re.sub("---.*$", "", text, 0, re.M)
         self.text = text
         self.at, self.ch, self.depth = 0, "", 0
@@ -28,12 +28,12 @@ class SLPP:
         self.next_chr()
         result = self.value()
         if not result:
-            return
+            return None
         return result
 
     def encode(self, obj):
         if not obj:
-            return
+            return None
         self.depth = 0
         return self.__encode(obj)
 
@@ -98,7 +98,7 @@ class SLPP:
     def value(self):
         self.white()
         if not self.ch or self.ch == "":
-            return
+            return None
         if self.ch == "{":
             return self.object()
         if self.ch == '"':
@@ -117,6 +117,7 @@ class SLPP:
                 else:
                     s += self.ch
         log.error("Unexpected end of string while parsing Lua string")
+        return None
 
     def object(self):
         o = {}
@@ -171,6 +172,7 @@ class SLPP:
         log.error(
             "Unexpected end of table while parsing Lua string."
         )  # Bad exit here
+        return None
 
     def word(self):
         s = ""
@@ -185,6 +187,7 @@ class SLPP:
                 elif re.match("^false$", s, re.I):
                     return False
                 return str(s)
+        return None
 
     def number(self):
         n = ""

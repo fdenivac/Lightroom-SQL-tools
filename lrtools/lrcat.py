@@ -275,7 +275,7 @@ class LRCatDB:
         hierachical_colls = []
         for (
             id_local,
-            creationId,
+            creation_id,
             genealogy,
             name,
             parent,
@@ -286,21 +286,21 @@ class LRCatDB:
             'creationId="com.adobe.ag.library.collection") AND '
             "systemOnly=0"
         ).fetchall():
-            id2coll[genealogy] = (id_local, creationId, name, parent)
-        for genealogy, (id_local, creationId, name, parent) in id2coll.items():
+            id2coll[genealogy] = (id_local, creation_id, name, parent)
+        for genealogy, (id_local, creation_id, name, parent) in id2coll.items():
             hname = []
             parts = genealogy.split("/")[1:]
             genkey = ""
             for part in parts:
                 genkey += f"/{part}"
-                id_local, creationId, name, parent = id2coll[genkey]
+                id_local, creation_id, name, parent = id2coll[genkey]
                 hname.append(name)
-            hierachical_colls.append((hname, id_local, creationId))
+            hierachical_colls.append((hname, id_local, creation_id))
         return sorted(hierachical_colls)
 
     def select_collections(self, what, collname=""):
         """
-        Select collections name for standard and dynamic type)
+        Select collections name for standard and dynamic type
           what = [ALL_COLL, STND_COLL, SMART_COLL] : collections type to retrieve
           collname : partial (including a %) or complete name of collection, or empty for all collections
         """
@@ -330,7 +330,7 @@ class LRCatDB:
         hierachical_colls = []
         for (
             id_local,
-            creationId,
+            creation_id,
             genealogy,
             name,
             parent,
@@ -342,16 +342,16 @@ class LRCatDB:
             'creationId="com.adobe.ag.library.collection.published") AND '
             "systemOnly=0"
         ).fetchall():
-            id2coll[genealogy] = (id_local, creationId, name, parent)
-        for genealogy, (id_local, creationId, name, parent) in id2coll.items():
+            id2coll[genealogy] = (id_local, creation_id, name, parent)
+        for genealogy, (id_local, creation_id, name, parent) in id2coll.items():
             hname = []
             parts = genealogy.split("/")[1:]
             genkey = ""
             for part in parts:
                 genkey += f"/{part}"
-                id_local, creationId, name, parent = id2coll[genkey]
+                id_local, creation_id, name, parent = id2coll[genkey]
                 hname.append(name)
-            hierachical_colls.append((hname, id_local, creationId))
+            hierachical_colls.append((hname, id_local, creation_id))
         return sorted(hierachical_colls)
 
     def select_metadatas_to_archive(self):
@@ -438,7 +438,8 @@ class LRCatDB:
         )
         return prodpath, capturetime
 
-    def xtract_prop_key(self, xmp, key):
+    @staticmethod
+    def xtract_prop_key(xmp, key):
         """
         Extract value for key in xmp string (exif:DateTimeOriginal='VALUE')
         """

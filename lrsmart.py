@@ -12,7 +12,7 @@ import logging
 import argparse
 from sqlite3 import OperationalError
 
-from lrtools import VERSION as lr_version
+from lrtools import VERSION as LR_VERSION
 
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config, LRConfigException
@@ -144,7 +144,7 @@ def main():
         log.addHandler(handler)
     log = logging.getLogger()
     log.info("lrsmart start")
-    log.info("lrtools version : %s", lr_version)
+    log.info("lrtools version : %s", LR_VERSION)
 
     #
     # for lrsmart validation :
