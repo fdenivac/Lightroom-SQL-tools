@@ -15,8 +15,7 @@ import sqlite3
 
 from lrtools import VERSION as LR_VERSION
 
-# config is loaded on import
-from lrtools.lrtoolconfig import lrt_config, LRConfigException
+from lrtools.lrtoolconfig import LRToolConfig, LRConfigException
 
 from lrtools.lrcat import LRCatDB, LRCatException
 from lrtools.lrselectgeneric import LRSelectException
@@ -33,6 +32,8 @@ log = logging.getLogger()
 
 def main():
     """Main entry from command line"""
+
+    config = LRToolConfig()
 
     #
     # command parser
@@ -75,7 +76,7 @@ def main():
     parser.add_argument(
         "-b",
         "--lrcat",
-        default=lrt_config.default_lrcat,
+        default=config.default_lrcat,
         help='Ligthroom catalog file for database request (default:"%(default)s"), or INI file (lrtools.ini form)',
     )
     parser.add_argument(
@@ -192,15 +193,15 @@ def main():
     # open database
     if not args.lrcat.endswith("lrcat"):
         # not a catalog but an INI file
-        lrt_config.load(args.lrcat)
-        args.lrcat = lrt_config.default_lrcat
-    lrdb = LRCatDB(args.lrcat)
+        config.load(args.lrcat)
+        args.lrcat = config.default_lrcat
+    lrdb = LRCatDB(config, args.lrcat)
 
     # select on which table to work
     if args.table == "photo":
         lrobj = lrdb.lrphoto
     else:
-        lrobj = LRSelectCollection(lrdb)
+        lrobj = LRSelectCollection(config, lrdb)
 
     if not (args.sql or args.count or args.results):
         print('WARNING: option "--count" forced')

@@ -14,8 +14,7 @@ from sqlite3 import OperationalError
 
 from lrtools import VERSION as LR_VERSION
 
-# config is loaded on import
-from lrtools.lrtoolconfig import lrt_config, LRConfigException
+from lrtools.lrtoolconfig import LRToolConfig, LRConfigException
 
 from lrtools.lrcat import LRCatDB, LRCatException
 from lrtools.lrselectgeneric import LRSelectException
@@ -26,6 +25,8 @@ from lrtools.display import display_results
 
 def main():
     """Main entry from command line"""
+
+    config = LRToolConfig()
 
     #
     # commands parser
@@ -51,7 +52,7 @@ def main():
     parser.add_argument(
         "-b",
         "--lrcat",
-        default=lrt_config.default_lrcat,
+        default=config.default_lrcat,
         help='Ligthroom catalog file for database request (default:"%(default)s")',
     )
     parser.add_argument(
@@ -169,9 +170,9 @@ def main():
     # open catalog
     if not args.lrcat.endswith("lrcat"):
         # specify LR catalog or INI file
-        lrt_config.load(args.lrcat)
-        args.lrcat = lrt_config.default_lrcat
-    lrdb = LRCatDB(args.lrcat)
+        config.load(args.lrcat)
+        args.lrcat = config.default_lrcat
+    lrdb = LRCatDB(config, args.lrcat)
 
     if args.list:
         if not args.smart_name:
@@ -238,7 +239,7 @@ def main():
             print("  ==> FAILED : Not found")
             continue
 
-        builder = SQLSmartColl(lrdb, smart)
+        builder = SQLSmartColl(config, lrdb, smart)
 
         if args.dict:
             print(" * Definition as python dictionnary :")

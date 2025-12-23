@@ -55,9 +55,10 @@ class LRSelectPhoto(LRSelectGeneric):
     Build select request for photo table Adobe_images
     """
 
-    def __init__(self, lrdb):
+    def __init__(self, config, lrdb):
         """ """
         super().__init__(
+            config,
             lrdb,
             #
             # Table source
@@ -872,7 +873,7 @@ class LRSelectPhoto(LRSelectGeneric):
 
         if re_photo.match(value):
             name_photo, width = re_photo.match(value).groups()
-            lrphoto = LRSelectPhoto(self.lrdb)
+            lrphoto = LRSelectPhoto(self.config, self.lrdb)
             coords = lrphoto.select_generic(
                 "latitude, longitude", f"name={name_photo}"
             ).fetchone()
@@ -894,7 +895,7 @@ class LRSelectPhoto(LRSelectGeneric):
         elif re_townw.match(value):
             town, width = re_townw.match(value).groups()
             try:
-                (lat, lon), address = geocodage(town)
+                (lat, lon), address = geocodage(self.config, town)
                 log.info(
                     "Geocodage for %s : %s, %s (%s)", town, lat, lon, address
                 )
@@ -904,8 +905,8 @@ class LRSelectPhoto(LRSelectGeneric):
         elif re_2town.match(value):
             town1, town2 = re_2town.match(value).groups()
             try:
-                (lat1, lon1), address1 = geocodage(town1)
-                (lat2, lon2), address2 = geocodage(town2)
+                (lat1, lon1), address1 = geocodage(self.config, town1)
+                (lat2, lon2), address2 = geocodage(self.config, town2)
                 log.info(
                     "Geocodage for %s : %s, %s (%s)",
                     town1,

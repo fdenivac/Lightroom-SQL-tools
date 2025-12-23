@@ -9,9 +9,6 @@ import math
 import geopy
 from geopy.exc import GeocoderTimedOut
 
-# config is loaded on import
-from .lrtoolconfig import lrt_config
-
 from .lrselectgeneric import LRSelectException
 
 
@@ -32,16 +29,16 @@ def square_around_location(lat, lon, width):
     )
 
 
-def geocodage(address):
+def geocodage(address, config):
     """
     Simple call to geo.api.gouv.fr to retrieve coordinates from address
     """
     try:
         details = ""
-        if lrt_config.geocoder.lower() == "banfrance":
+        if config.geocoder.lower() == "banfrance":
             location = geopy.geocoders.BANFrance().geocode(address, timeout=5)
             details = f" ({location.raw['properties']['postcode']}), {location.raw['properties']['context']}"
-        elif lrt_config.geocoder.lower() == "nominatim":
+        elif config.geocoder.lower() == "nominatim":
             location = geopy.geocoders.Nominatim(user_agent="lrtools").geocode(
                 address, timeout=5
             )
