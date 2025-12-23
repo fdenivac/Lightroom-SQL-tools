@@ -65,7 +65,7 @@ class SQLSmartColl:
         ' ELSE CAST(i.filewidth AS int) || "x" || CAST(i.fileHeight AS int) END) AS dims '
     )
 
-    def __init__(self, lrdb, smart):
+    def __init__(self, config, lrdb, smart):
         """
         Initialize from :
         - lrdb : LRCatDB instance
@@ -87,6 +87,7 @@ class SQLSmartColl:
                 }"
 
         """
+        self.config = config
         self.lrdb = lrdb
         self.smart = smart
         # will be set latter
@@ -242,7 +243,7 @@ class SQLSmartColl:
 
     def criteria_collection(self):
         """criteria collection"""
-        lrcollection = LRSelectCollection(self.lrdb)
+        lrcollection = LRSelectCollection(self.config, self.lrdb)
         if self.func["operation"] in ["all", "beginsWith", "endsWith"]:
             what = {
                 "all": '"%%%s%%"',
@@ -877,7 +878,7 @@ class SQLSmartColl:
         return smart_str
 
 
-def select_smart(lrdb, smart_name, columns, is_file=False, sql_only=False):
+def select_smart(config, lrdb, smart_name, columns, is_file=False, sql_only=False):
     """
     Execute smart collection :
        build SQL string from lua source, execute and return rows
@@ -902,7 +903,7 @@ def select_smart(lrdb, smart_name, columns, is_file=False, sql_only=False):
             raise SmartException(f'smart collection "{smart_name}" not found')
         log.info(smart)
 
-    builder = SQLSmartColl(lrdb, smart)
+    builder = SQLSmartColl(config, lrdb, smart)
     sql = builder.build_sql(columns)
     log.info("smart sql: %s", sql)
     if sql_only:
