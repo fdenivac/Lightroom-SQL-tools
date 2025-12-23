@@ -46,7 +46,7 @@ def main():
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "smart_name",
-        help='Name of smart(s) collection. Can be lightroom smart collections (joker "%%"), or filenames (joker "*") with option "--file",',
+        help='Name of smart(s) collection. Can be lightroom smart collections (wildcard "%%"), or filenames (wildcard "*") with option "--file",',
         nargs="*",
     )
     parser.add_argument(
@@ -59,14 +59,14 @@ def main():
         "-f",
         "--file",
         action="store_true",
-        help="positionnal parameters are files, not smart collection names",
+        help="positional parameters are files, not smart collection names",
     )
     parser.add_argument(
         "-l",
         "--list",
         action="store_true",
         help='List smart collections of name "smart_name" from Lightroom catalog.'
-        ' "smart_name" can include jokers "%%". Leave empty for all collections',
+        ' "smart_name" can include wildcards "%%". Leave empty for all collections',
     )
     parser.add_argument(
         "--raw",
@@ -77,7 +77,7 @@ def main():
         "-d",
         "--dict",
         action="store_true",
-        help="Display description of smart collection as python dictionnary",
+        help="Display description of smart collection as python dictionary",
     )
     parser.add_argument(
         "-s", "--sql", action="store_true", help="Display SQL request"
@@ -179,7 +179,7 @@ def main():
             args.smart_name = "%"
 
     if not args.file:
-        # place for process joker '%'
+        # place to process wildcard '%'
         colls = list()
         for name in args.smart_name:
             colls += lrdb.select_collections(lrdb.SMART_COLL, name)
@@ -242,7 +242,7 @@ def main():
         builder = SQLSmartColl(config, lrdb, smart)
 
         if args.dict:
-            print(" * Definition as python dictionnary :")
+            print(" * Definition as python dictionary :")
             for _s in builder.to_string().splitlines():
                 print("\t", _s)
 
