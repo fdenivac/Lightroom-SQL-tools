@@ -56,17 +56,8 @@ class LRToolConfig(metaclass=Singleton):
         self.default_lrcat = (
             "C:\\Users\\Default\\Documents\\My Lightroom Catalog.lrcat"
         )
-        self.default_prod_directory = (
-            "C:\\Users\\Default\\Documents\\Photos\\Production"
-        )
-        self.rsync_exe = "C:\\cygwin64\\bin\\rsync.exe"
-        self.rsync_max_len_line = 4092
-        self.archive_date_fmt = "%%Y/%%m"
-        self.production_date_fmt = "%%Y/%%m"
-        self.fs_encoding = "cp1252"
         self.dayfirst = True
         self.geocoder = "nominatim"
-        self.archive_volumes = []
 
         try:
             self.load(CONFIG_FILENAME)
@@ -84,12 +75,6 @@ class LRToolConfig(metaclass=Singleton):
         parser = ConfigParser(
             {
                 "LRCatalog": self.default_lrcat,
-                "ProdDirectory": self.default_prod_directory,
-                "RSyncExe": self.rsync_exe,
-                "RsyncMaxLenLine": self.rsync_max_len_line,
-                "FSEncoding": self.fs_encoding,
-                "ArchiveDateFmt": self.archive_date_fmt,
-                "ProductionDateFmt": self.production_date_fmt,
                 "DayFirst": self.dayfirst,
                 "GeoCoder": self.geocoder,
             }
@@ -105,49 +90,8 @@ class LRToolConfig(metaclass=Singleton):
         parser.read(config_file)
         try:
             self.default_lrcat = parser.get(CONFIG_MAIN, "LRCatalog")
-            self.default_prod_directory = parser.get(
-                CONFIG_MAIN, "ProdDirectory"
-            )
-
-            self.rsync_exe = parser.get(CONFIG_MAIN, "RSyncExe")
-            self.rsync_max_len_line = parser.getint(
-                CONFIG_MAIN, "RsyncMaxLenLine"
-            )
-
-            self.archive_date_fmt = parser.get(CONFIG_MAIN, "ArchiveDateFmt")
-            self.production_date_fmt = parser.get(
-                CONFIG_MAIN, "ProductionDateFmt"
-            )
-
-            self.fs_encoding = parser.get(CONFIG_MAIN, "FSEncoding")
-
             self.dayfirst = parser.getboolean(CONFIG_MAIN, "DayFirst")
-
             self.geocoder = parser.get(CONFIG_MAIN, "GeoCoder")
-
-            if parser.has_section(CONFIG_ARCHVOL):
-                self.archive_volumes = []
-                idvol = 1
-                while True:
-                    if not parser.has_option(CONFIG_ARCHVOL, f"VOLUME{idvol}"):
-                        break
-                    archvol = parser.get(CONFIG_ARCHVOL, f"VOLUME{idvol}")
-                    # print archvol
-                    try:
-                        volname, dirname, datestart, dateend = archvol.split(
-                            ","
-                        )
-                        volname = volname.strip()
-                        dirname = dirname.strip()
-                        datestart = dateparser.parse(datestart)
-                        dateend = dateparser.parse(dateend)
-                    except ValueError:
-                        print(f"ERROR section {CONFIG_ARCHVOL} invalid")
-                        sys.exit(0)
-                    self.archive_volumes.append(
-                        (volname, dirname, datestart, dateend)
-                    )
-                    idvol += 1
 
         except Error as _e:
             raise LRConfigException(

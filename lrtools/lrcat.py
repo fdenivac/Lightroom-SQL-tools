@@ -6,7 +6,6 @@ Main class LRCatDB for Lightroom database manipulations
 
 """
 import os
-import sys
 import sqlite3
 import logging
 from datetime import datetime
@@ -106,11 +105,11 @@ class LRCatDB:
                     uri,
                 )
                 log.info("Adobe_DBVersion : %s", self.lrdb_version)
-                return (True, "")
+                return True, ""
             except (sqlite3.OperationalError, sqlite3.DatabaseError) as _e:
                 self.conn.close()
                 log.info('open "%s" failed : %s', self.lrcat_file, str(_e))
-                return (False, "Not an Lightroom catalog")
+                return False, "Not an Lightroom catalog"
 
         self.lrcat_file = lrcat_file
         if not os.path.exists(self.lrcat_file):
