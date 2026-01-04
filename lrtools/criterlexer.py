@@ -36,7 +36,7 @@ class CriterLexer:
         #
         # get criter
         #
-        _m = re.match(r"(\w+)\ *", self.criters)
+        _m = re.match(r"(\w+) *", self.criters)
         if not _m:
             return False
         key = _m.group(1).lower()
@@ -45,18 +45,18 @@ class CriterLexer:
         #
         # get value
         #
-        _m = re.match(r"\ *=\ *", self.criters)
+        _m = re.match(r" *= *", self.criters)
         if _m:
             self.criters = self.criters[_m.end() :]
             # regex from https://www.metaltoad.com/blog/regex-quoted-string-escapable-quotes
             _m = re.match(
-                r'\ *((?<![\\])[\'"])((?:.(?!(?<![\\])\1))*.?)\1', self.criters
+                r' *((?<![\\])[\'"])((?:.(?!(?<![\\])\1))*.?)\1', self.criters
             )
             if _m:
                 # regex return quote type ("') and string
                 value = _m.group(2)
             else:
-                _m = re.match(r"\ *([^,\|\)\()]+)", self.criters)
+                _m = re.match(r" *([^,\|\)\()]+)", self.criters)
                 if _m:
                     value = _m.group(1)
                 else:
@@ -98,7 +98,7 @@ class CriterLexer:
             #
             # operator left parenthesis : '('
             #
-            _m = re.match(r"(\()\ *", self.criters)
+            _m = re.match(r"(\() *", self.criters)
             if _m:
                 self.tokens.append(("LPAR", None))
                 self.criters = self.criters[_m.end() :]
@@ -107,7 +107,7 @@ class CriterLexer:
             #
             # operator right parenthesis : ')'
             #
-            _m = re.match(r"(\))\ *", self.criters)
+            _m = re.match(r"(\)) *", self.criters)
             if _m:
                 self.tokens.append(("RPAR", None))
                 self.criters = self.criters[_m.end() :]
@@ -116,7 +116,7 @@ class CriterLexer:
             #
             # operator AND : ','
             #
-            _m = re.match(r",\ *", self.criters)
+            _m = re.match(r", *", self.criters)
             if _m:
                 self.tokens.append(("AND", None))
                 self.criters = self.criters[_m.end() :]
@@ -125,7 +125,7 @@ class CriterLexer:
             #
             # operator OR : '|'
             #
-            _m = re.match(r"\|\ *", self.criters)
+            _m = re.match(r"\| *", self.criters)
             if _m:
                 self.tokens.append(("OR", None))
                 self.criters = self.criters[_m.end() :]

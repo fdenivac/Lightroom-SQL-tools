@@ -253,7 +253,7 @@ def main():
             rows = lrobj.select_generic(
                 ",".join(columns_lr), args.criteria
             ).fetchall()
-        except (LRSelectException) as _e:
+        except LRSelectException as _e:
             # convert specific error caused by a limitation on build SQL with criteria width or height
             if _e.args[0] == "no such column: dims":
                 _e.args = ('Try to add column "dims"',)
