@@ -234,7 +234,7 @@ class SQLSmartColl:
         self.build_string_value("", "name")
 
     def criteria_fileFormat(self):
-        '''criteria file format (dng, video...). Operation "==" or "!="'''
+        """criteria file format (dng, video...). Operation "==" or "!=" """
         self.sql += self._complete_sql(
             "",
             f' WHERE i.fileFormat {self.func["operation"]} "{self.func["value"]}"',
@@ -408,7 +408,7 @@ class SQLSmartColl:
             )
 
     def criteria_camera(self):
-        '''criteria camera : operations on strings + "==' or "!="'''
+        """criteria camera : operations on strings + "==" or "!=" """
         if self.func["operation"] == "!=":
             column = "em.cameraModelRef IS NULL OR cm.value"
         elif self.func["operation"] == "==":
@@ -422,7 +422,7 @@ class SQLSmartColl:
         )
 
     def criteria_lens(self):
-        '''criteria camera : operations on strings + "==' or "!="'''
+        """criteria camera : operations on strings + "==" or "!=" """
         if self.func["operation"] == "!=":
             column = "em.lensRef IS NULL OR el.value"
         elif self.func["operation"] == "==":
@@ -452,7 +452,7 @@ class SQLSmartColl:
     def criteria_aperture(self):
         """criteria aperture
         2 * ( log base 2 of F number)
-        value = 2 * log(F/x], 2) and  [F/x] = 2**(value/2)
+        value = 2 * log([F/x], 2) and  [F/x] = 2**(value/2)
         f/1.0    : 0
         f/1.4    : 0.997085365434048
         f/2.0    : 2
@@ -518,8 +518,8 @@ class SQLSmartColl:
         Find in earchindex, keywords, collections, creator, coptright, caption, colorprofile, full pathname
         """
         rules = {
-            "any": (" OR "),
-            "all": (" AND "),
+            "any": " OR ",
+            "all": " AND ",
         }
         if self.func["operation"] not in rules:
             raise SmartException(
@@ -590,8 +590,8 @@ class SQLSmartColl:
         TODO
         """
         rules = {
-            "any": ("OR"),
-            "all": ("AND"),
+            "any": "OR",
+            "all": "AND",
         }
         if self.func["operation"] not in rules:
             raise SmartException(
@@ -783,7 +783,7 @@ class SQLSmartColl:
         """
         add join tables from a sql select request to self.joins
         Return select part
-        basesql doesnt contains WHERE statement
+        basesql doesn't contain WHERE statement
         """
         ijoin = basesql.find("LEFT JOIN ")
         sjoins = basesql[ijoin:]

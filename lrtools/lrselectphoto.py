@@ -795,6 +795,7 @@ class LRSelectPhoto(LRSelectGeneric):
         convert aperture value (as 5.6, F8) to LR value : 2 * ( log base 2 of F number)
         take care with operator '=' because it works on float
         """
+        oper = None
         for index, char in enumerate(value):
             if char.isnumeric():
                 oper = value[:index]
@@ -813,6 +814,7 @@ class LRSelectPhoto(LRSelectGeneric):
         convert speed value in seconds to LR value : log base 2 of Nth of speed
         ex: ">=1/1000" for 1/1000s, "<5" for 5 seconds
         """
+        oper = None
         for index, char in enumerate(value):
             if char.isnumeric():
                 oper = value[:index]
@@ -1003,6 +1005,7 @@ class LRSelectPhoto(LRSelectGeneric):
         match = re.match(r"duplicated_names(.+)", columns)
         if match:
             return self.lrdb.select_duplicates(sql=True)
+        return None
 
     def select_generic(self, columns, criters="", **kwargs):
         """
