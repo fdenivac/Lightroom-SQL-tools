@@ -1,6 +1,5 @@
-#!python3
 # # -*- coding: utf-8 -*-
-# pylint: disable=line-too-long,bad-continuation, bad-whitespace
+# pylint: disable=line-too-long,too-many-lines
 
 """
 LRSelectPhoto class for building SQL select for table Adobe_images
@@ -267,6 +266,14 @@ class LRSelectPhoto(LRSelectGeneric):
                         "am.monochrome AS monochrome",
                         [
                             "LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image"
+                        ],
+                    ]
+                },
+                "grayscale": {
+                    "True": [
+                        "ids.grayscale AS grayscale",
+                        [
+                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
                         ],
                     ]
                 },
@@ -612,6 +619,13 @@ class LRSelectPhoto(LRSelectGeneric):
                         "LEFT JOIN Adobe_AdditionalMetadata am ON i.id_local = am.image"
                     ],
                     "am.monochrome = %s",
+                    self.func_0_1,
+                ],
+                "grayscale": [
+                    [
+                        "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                    ],
+                    "ids.grayscale = %s",
                     self.func_0_1,
                 ],
                 "hasgps": [
