@@ -939,8 +939,8 @@ class LRSelectPhoto(LRSelectGeneric):
         else:
             raise LRSelectException("GPS coordinates malformed")
 
-        lat1, lat2 = reorder(lat1, lat2)
-        lon1, lon2 = reorder(lon1, lon2)
+        lat1, lat2 = reorder(float(lat1), float(lat2))
+        lon1, lon2 = reorder(float(lon1), float(lon2))
         return f"(em.hasGps = 1 AND em.gpsLatitude BETWEEN {lat1} AND {lat2} AND em.gpsLongitude BETWEEN {lon1} AND {lon2})"
 
     def func_published(self, value):
