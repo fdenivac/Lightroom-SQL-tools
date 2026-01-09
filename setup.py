@@ -1,3 +1,14 @@
+import re
+
+VERSIONFILE = "lrtools/_version.py"
+verstrline = open(VERSIONFILE, "rt").read()
+VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    verstr = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
+
 from setuptools import setup
 
 with open("README.md", "r") as fh:
@@ -9,7 +20,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/fdenivac/Lightroom-SQL-tools",
-    version="1.0.0",
+    version=verstr,
     author="fedor denivac",
     author_email="fdenivac@gmail.com",
     license="GNU GPLv3",

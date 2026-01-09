@@ -1,1 +1,1 @@
-VERSION = "2025-12-12"
+from ._version import __version__

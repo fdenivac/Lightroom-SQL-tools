@@ -12,7 +12,7 @@ import logging
 import argparse
 from sqlite3 import OperationalError
 
-from lrtools import VERSION as LR_VERSION
+from lrtools import __version__ as LR_VERSION
 
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config, LRConfigException

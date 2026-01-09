@@ -13,7 +13,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import sqlite3
 
-from lrtools import VERSION as LR_VERSION
+from lrtools import __version__ as LR_VERSION
 
 # config is loaded on import
 from lrtools.lrtoolconfig import lrt_config, LRConfigException
