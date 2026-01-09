@@ -221,12 +221,12 @@ def display_results(rows, columns, **kwargs):
     if wanted_lines >= len(rows):
         max_lines = len(rows)
         if kwargs.get("header", True):
-            print(f" * Photo results ({len(rows)} photos) :")
+            print(f" * Results ({len(rows)} entries) :")
     else:
         max_lines = wanted_lines
         if kwargs.get("header", True):
             print(
-                f" * Photo results (first {wanted_lines} photos on {len(rows)}) :"
+                f" * Results (first {wanted_lines} entries of {len(rows)}) :"
             )
 
     column_spec = prepare_display_columns(columns, widths)

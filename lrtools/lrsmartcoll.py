@@ -10,12 +10,14 @@ SQLSmartColl Class for Lightroom Smart Collection manipulations
 import logging
 from datetime import datetime, timedelta
 
-from . import TIMESTAMP_LRBASE
 from .lrkeyword import LRKeywords
 from .lrselectcollection import LRSelectCollection
 from .slpp import SLPP
 
 log = logging.getLogger(__name__)
+
+# unix timestamp for LR epoch (2001,1,1,0,0,0)
+TIMESTAMP_LR_EPOCH = 978307200
 
 
 class SmartException(Exception):
@@ -182,7 +184,7 @@ class SQLSmartColl:
 
     def criteria_touchTime(self):
         """criteria touchTime"""
-        db_touchtime = f'date(i.touchTime + {TIMESTAMP_LRBASE}, "unixepoch")'
+        db_touchtime = f'date(i.touchTime + {TIMESTAMP_LR_EPOCH}, "unixepoch")'
         if self.func["operation"] == "in":
             self.sql += self._complete_sql(
                 "",
@@ -206,7 +208,7 @@ class SQLSmartColl:
         elif self.func["operation"] == "thisYear":
             self.sql += self._complete_sql(
                 "",
-                f' WHERE date(i.touchTime + {TIMESTAMP_LRBASE}, "unixepoch", "start of year") = date("now","start of year")',
+                f' WHERE date(i.touchTime + {TIMESTAMP_LR_EPOCH}, "unixepoch", "start of year") = date("now","start of year")',
             )
         elif self.func["operation"] == "today":
             self.sql += self._complete_sql(
