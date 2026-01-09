@@ -8,7 +8,7 @@ Main class LRCatDB for Lightroom database manipulations
 import os
 import sqlite3
 import logging
-from datetime import datetime,  timezone
+from datetime import datetime, timezone
 from dateutil import parser
 
 from . import utczone, localzone
@@ -22,6 +22,8 @@ log = logging.getLogger(__name__)
 
 # date reference of lightroom (at least for timestamp of photos modified)
 LIGHTROOM_EPOCH = datetime(2001, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+# unix timestamp for LR epoch (2001,1,1,0,0,0)
+TIMESTAMP_LR_EPOCH = 978307200
 
 
 def date_to_lrstamp(mydate, localtz=True):

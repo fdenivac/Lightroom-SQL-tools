@@ -10,14 +10,12 @@ SQLSmartColl Class for Lightroom Smart Collection manipulations
 import logging
 from datetime import datetime, timedelta
 
+from .lrcat import TIMESTAMP_LR_EPOCH
 from .lrkeyword import LRKeywords
 from .lrselectcollection import LRSelectCollection
 from .slpp import SLPP
 
 log = logging.getLogger(__name__)
-
-# unix timestamp for LR epoch (2001,1,1,0,0,0)
-TIMESTAMP_LR_EPOCH = 978307200
 
 
 class SmartException(Exception):
@@ -92,9 +90,9 @@ class SQLSmartColl:
         self.lrdb = lrdb
         self.smart = smart
         # will be set latter
-        self.base_sql_select = (
-            self.base_select
-        ) = self.base_sql = self.sql = self.func = self.joins = ""
+        self.base_sql_select = self.base_select = self.base_sql = self.sql = (
+            self.func
+        ) = self.joins = ""
 
     def criteria_aspectRatio(self):
         """criteria aspectRatio"""
