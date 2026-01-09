@@ -12,8 +12,7 @@ import os
 import re
 from datetime import datetime, timedelta
 import pytz
-
-from . import localzone
+import tzlocal
 
 
 def smart_unit(value, unit):
@@ -82,7 +81,7 @@ def display_lrtimestamp(value):
     utc = pytz.utc.localize(
         datetime(2001, 1, 1, 0, 0, 0) + timedelta(seconds=float(value))
     )
-    return utc.astimezone(localzone).strftime("%Y-%m-%d %H:%M:%S")
+    return utc.astimezone(tzlocal.get_localzone()).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def display_duration(value):
@@ -225,9 +224,7 @@ def display_results(rows, columns, **kwargs):
     else:
         max_lines = wanted_lines
         if kwargs.get("header", True):
-            print(
-                f" * Results (first {wanted_lines} entries of {len(rows)}) :"
-            )
+            print(f" * Results (first {wanted_lines} entries of {len(rows)}) :")
 
     column_spec = prepare_display_columns(columns, widths)
 

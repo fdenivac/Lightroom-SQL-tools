@@ -10,8 +10,8 @@ import sqlite3
 import logging
 from datetime import datetime, timezone
 from dateutil import parser
-
-from . import utczone, localzone
+import tzlocal
+import pytz
 
 # config is loaded on import
 from .lrtoolconfig import lrt_config
@@ -34,9 +34,9 @@ def date_to_lrstamp(mydate, localtz=True):
         dtdate = parser.parse(mydate, dayfirst=lrt_config.dayfirst)
         # set locale timezone
         if localtz:
-            dtdate = dtdate.astimezone(localzone)
+            dtdate = dtdate.astimezone(tzlocal.get_localzone())
         else:
-            dtdate = dtdate.astimezone(utczone)
+            dtdate = dtdate.astimezone(pytz.utc)
     elif isinstance(mydate, datetime):
         dtdate = mydate
     else:
