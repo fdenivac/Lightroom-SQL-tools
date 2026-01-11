@@ -13,6 +13,8 @@ from dateutil import parser
 import tzlocal
 import pytz
 
+from . import utczone, localzone
+
 from .slpp import SLPP
 
 log = logging.getLogger(__name__)
