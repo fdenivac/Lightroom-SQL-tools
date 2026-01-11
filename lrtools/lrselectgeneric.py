@@ -12,9 +12,6 @@ import logging
 from datetime import datetime
 from dateutil import parser
 
-# config is loaded on import
-from .lrtoolconfig import lrt_config
-
 from .lrcat import date_to_lrstamp
 from .criterlexer import CriterLexer
 
@@ -31,13 +28,13 @@ STARTS_OF_DATE = {
 }
 
 
-def parsedate(date):
+def parsedate(config, date):
     """return datetime from string"""
     if isinstance(date, str):
         return parser.parse(
             date,
             default=datetime(1900, 1, 1, 0, 0, 0),
-            dayfirst=lrt_config.dayfirst,
+            dayfirst=config.dayfirst,
         )
     if isinstance(date, datetime):
         return date
@@ -69,7 +66,7 @@ class LRSelectGeneric:
     # specific key for column specification
     _VAR_FIELD = "var:"
 
-    def __init__(self, lrdb, main_table, columns, criteria):
+    def __init__(self, config, lrdb, main_table, columns, criteria):
         """
         * param lrdb : LRCatDB instance
         * param main_table: string,
@@ -101,6 +98,7 @@ class LRSelectGeneric:
                 'JOIN AgLibraryCollection col ON col.id_local = ci.Collection JOIN  AgLibraryCollectionimage ci ON ci.image = i.id_local',
                 'col.name = "%s"' ]                   ]
         """
+        self.config = config
         self.lrdb = lrdb
         self.from_table = f"FROM {main_table}"
         self.froms = None
@@ -129,7 +127,7 @@ class LRSelectGeneric:
                 break
         if not oper:
             raise LRSelectException("None operator for date")
-        date = parsedate(value)
+        date = parsedate(self.config, value)
         if not date:
             raise LRSelectException("Incorrect date")
         # value is it year, month/year or day/month/year ?
@@ -147,7 +145,7 @@ class LRSelectGeneric:
                 oper = value[:index]
                 value = value[index:]
                 break
-        dtmod = date_to_lrstamp(value)
+        dtmod = date_to_lrstamp(self.config, value)
         if dtmod is None:
             raise LRSelectException('invalid date value on "datemod"')
         return oper, dtmod
@@ -160,7 +158,7 @@ class LRSelectGeneric:
                 oper = value[:index]
                 value = value[index:]
                 break
-        dtmod = date_to_lrstamp(value, False)
+        dtmod = date_to_lrstamp(self.config, value, False)
         if not dtmod:
             raise LRSelectException('invalid date value on "datemod"')
         return oper, dtmod

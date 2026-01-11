@@ -17,9 +17,10 @@ class LRSelectCollection(LRSelectGeneric):
 
     MAIN_TABLE = "AgLibraryCollection col"
 
-    def __init__(self, lrdb):
+    def __init__(self, config, lrdb):
         """ """
         super().__init__(
+            config,
             lrdb,  #
             # Table source
             #
