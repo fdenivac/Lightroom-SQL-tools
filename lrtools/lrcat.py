@@ -13,8 +13,6 @@ from dateutil import parser
 import tzlocal
 import pytz
 
-from . import utczone, localzone
-
 from .slpp import SLPP
 
 log = logging.getLogger(__name__)
@@ -118,7 +116,8 @@ class LRCatDB:
 
         self.lrcat_file = lrcat_file
         if not os.path.exists(self.lrcat_file):
-            raise LRCatException("LR catalog doesn't exist")
+            raise LRCatException("LR catalog doesn't exist: %s" % (
+                self.lrcat_file))
         log.info(
             "sqlite3 binding version : %s , sqlite3 version : %s",
             sqlite3.version,
