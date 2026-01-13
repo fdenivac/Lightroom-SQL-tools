@@ -1,5 +1,5 @@
 # Lightroom-SQL-tools
-Python library and scripts to retrieve and displays photos data from an Adobe Lightroom catalog
+Python library and scripts to retrieve and displays photo data from an Adobe Lightroom Classic catalog
 
 * Execute SQL queries outside of Lightroom
 * The catalog is opened in read-only mode, so scripts can be executed while Lightroom is still running.
@@ -364,7 +364,7 @@ Unfortunately :
 
         lrsmart.py --list --dict "%mil%"
            Smart Collection "Family smart photos"
-           * Definition as python dictionnary :
+           * Definition as python dictionary :
                    0 = {'criteria': 'rating', 'operation': '>=', 'value': 3}
                    1 = {'criteria': 'keywords', 'operation': 'any', 'value': 'family', 'value2': ''}
                    combine = intersect
@@ -375,7 +375,7 @@ Unfortunately :
 
         lrsmart.py "Holidays no GPS" --sql --max_lines 2 --columns "name, datecapt"
           Smart Collection "Holidays no GPS"
-           * Definition as python dictionnary :
+           * Definition as python dictionary :
                 0 = {'criteria': 'collection', 'operation': 'beginsWith', 'value': 'Ballades', 'value2': ''}
                 1 = {'criteria': 'hasGPSData', 'operation': '==', 'value': False}
                 combine = intersect
@@ -414,11 +414,11 @@ Unfortunately :
         -f, --file            positional parameters are files, not smart collection
                                 names
         -l, --list            List smart collections of name "smart_name" from
-                                Lightroom catalog. "smart_name" can include jokers
-                                "%". Leave empty for list all collections
+                                Lightroom catalog. "smart_name" can include 
+                                wildcards "%". Leave empty for list all collections
         --raw                 Display description of smart collection as stored
         -d, --dict            Display description of smart collection as python
-                                dictionnary
+                                dictionary
         -s, --sql             Display SQL query
         -c, --count           Display count of results
         -r, --results         Display query results
