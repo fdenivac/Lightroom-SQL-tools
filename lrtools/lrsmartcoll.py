@@ -8,7 +8,6 @@ SQLSmartColl Class for Lightroom Smart Collection manipulations
 
 """
 import logging
-from datetime import datetime, timedelta
 
 from .lrcat import TIMESTAMP_LR_EPOCH
 from .lrkeyword import LRKeywords
@@ -46,7 +45,6 @@ class SQLSmartColl:
         iptc
         isoSpeedRating
         keywords
-        labelColor
         labelText
         lens
         metadata
@@ -131,7 +129,6 @@ class SQLSmartColl:
         _parts = _sql.split(" FROM ")
         if "dims" not in self.base_select:
             raise SmartException('This smart collection needs "dims" columns')
-        # _parts[0] += self._SELECT_DIMS
         self.sql += " FROM ".join(_parts)
 
     def criteria_heightCropped(self):
@@ -152,20 +149,14 @@ class SQLSmartColl:
         _parts = _sql.split(" FROM ")
         if "dims" not in self.base_select:
             raise SmartException('This smart collection needs "dims" columns')
-        # _parts[0] += self._SELECT_DIMS
         self.sql += " FROM ".join(_parts)
 
     def criteria_captureTime(self):
         """criteria captureTime"""
         if self.func["operation"] == "in":
-            # shift of 24 h for end of day :
-            endtime = (
-                datetime.strptime(self.func["value2"], "%Y-%m-%d")
-                + timedelta(days=1)
-            ).strftime("%Y-%m-%d")
             self.sql += self._complete_sql(
                 "",
-                f'WHERE i.captureTime >= "{self.func["value"]}" AND  i.captureTime < "{endtime}"',
+                f'WHERE date(i.captureTime) >= "{self.func["value"]}" AND  date(i.captureTime) <= "{self.func["value2"]}"',
             )
         elif self.func["operation"] == "inLast":
             self.sql += self._complete_sql(
@@ -175,7 +166,7 @@ class SQLSmartColl:
         elif self.func["operation"] in ["==", "!=", ">", "<"]:
             self.sql += self._complete_sql(
                 "",
-                f' WHERE i.captureTime {self.func["operation"]} "{self.func["value"]}"',
+                f' WHERE date(i.captureTime) {self.func["operation"]} "{self.func["value"]}"',
             )
         else:
             raise SmartException(
@@ -349,8 +340,13 @@ class SQLSmartColl:
             )
 
     def criteria_labelColor(self):
-        """criteria color or text label (criteria labelText)"""
+        """criteria text label when string value, or color label when integer value (unsupported)"""
         value = self.func["value"]
+        if isinstance(value, int):
+            # colorLabel case : this is a code for color, but not stored in database. Prefer using labelText
+            raise SmartException(
+                "labelColor unsupported : prefer using criteria labelText"
+            )
         if value == "none":
             value = ""
         self.sql += self._complete_sql(
