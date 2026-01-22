@@ -34,6 +34,7 @@ class SQLSmartColl:
         captureTime
         collection
         colorMode
+        copyName
         exif
         fileFormat
         filename
@@ -689,10 +690,14 @@ class SQLSmartColl:
             "LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local ",
             "rf.absolutePath || fo.pathFromRoot",
         )
-        # [ 'LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local',
-        #  'LEFT JOIN AgLibraryFolder fo ON fi.folder = fo.id_local',
-        #  'LEFT JOIN AgLibraryRootFolder rf ON fo.rootFolder = rf.id_local'],
-        # 'UPPER(rf.absolutePath || fo.pathFromRoot) LIKE "%s"',
+
+
+    def criteria_copyname(self):
+        """
+        criteria copyname
+        """
+        self.build_string_value("", "i.copyName")
+
 
     def build_string_value(self, tables_join, where_column):
         """
@@ -706,6 +711,7 @@ class SQLSmartColl:
             "endsWith": ('"%%%s/t%%"', "AND", "LIKE"),
             "words": ('"%%/t%s/t%%"', "AND", "LIKE"),
             "noneOf": ('"%%%s%%"', "AND", "NOT LIKE"),
+            "notEmpty": (),
             "==": ('"%s"', "AND", "=="),
             "!=": ('"%s"', "AND", "!="),
         }
@@ -713,6 +719,9 @@ class SQLSmartColl:
             raise SmartException(
                 f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}'
             )
+        if self.func["operation"] == "notEmpty":
+            self.sql += self._complete_sql(tables_join, f" WHERE {where_column} != ''")
+            return
         what, combine, test = rules[self.func["operation"]]
         _sql = ""
         if self.func["operation"] in ["==", "!="]:
@@ -723,7 +732,7 @@ class SQLSmartColl:
             values = self.func["value"].split()
         for value in values:
             if not value:
-                print("TODEBUG")
+                log.warning("not value")
             if value and value[0] == "+":  # force AND
                 _sql += " AND "
                 value = value[1:]

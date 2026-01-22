@@ -36,20 +36,21 @@ Modify the config file *lrtools.ini*:
     from lrtools.lrcat import LRCatDB, LRCatException
     from lrtools.lrselectgeneric import LRSelectException
     from lrtools.display import display_results
+    from lrtools.lrtoolconfig import LRToolConfig
 
     # open Lightroom catalog
     try:
-        lrdb = LRCatDB("D:\Lightroom\Mycatalog.lrcat")
+        lrdb = LRCatDB(LRToolConfig(), r"D:\Lightroom\Mycatalog.lrcat")
     except LRCatException as _e:
-        sys.exit(' ==> FAILED: %s' % _e)
+        sys.exit(f" ==> FAILED: {_e}")
 
     # select photos
-    columns = "name,datecapt, keywords"
+    columns = "name,datecapt,keywords"
     criteria = "datecapt=>=2016-5-15, datecapt=<=2018-1-31, keyword=beach, keyword=family, rating=>3"
     try:
         rows = lrdb.lrphoto.select_generic(columns, criteria).fetchall()
     except LRSelectException as _e:
-        sys.exit(' ==> FAILED: %s' % _e)
+        sys.exit(f" ==> FAILED: {_e}")
 
     # and display results
     display_results(rows, columns, header=True)
@@ -334,6 +335,7 @@ Unfortunately :
 * captureTime
 * collection
 * colorMode
+* copyName
 * creator
 * exif
 * fileFormat
