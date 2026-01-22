@@ -59,7 +59,7 @@ def main():
         "-f",
         "--file",
         action="store_true",
-        help="positionnal parameters are files, not smart collection names",
+        help="positional parameters are files, not smart collection names",
     )
     parser.add_argument(
         "-l",
@@ -248,7 +248,7 @@ def main():
         builder = SQLSmartColl(config, lrdb, smart)
 
         if args.dict:
-            print(" * Definition as python dictionnary :")
+            print(" * Definition as python dictionary :")
             for _s in builder.to_string().splitlines():
                 print("\t", _s)
 
