@@ -395,41 +395,47 @@ Unfortunately :
 ### Complete help
 
         usage: lrsmart.py [-h] [-b LRCAT] [-f] [-l] [--raw] [-d] [-s] [-c] [-r]
-                        [-n MAX_LINES] [-C COLUMNS] [-N] [--raw_print] [--log LOG]
-                        [smart_name [smart_name ...]]
+                         [-n MAX_LINES] [-C COLUMNS] [-o SORT_COLUMN] [-N] [-w WIDTHS]
+                         [-S SEPARATOR] [--raw-print] [--log LOG] [smart_name ...]
 
-        Execute smart collections from an Adobe Lightroom catalog or from an exported file
-        Supported criteria are : all, aperture, aspectRatio, camera, captureTime,
-          collection, colorMode, creator, exif, fileFormat, filename, flashFired,
-          focalLength, hasAdjustments, hasGPSData, heightCropped, iptc, isoSpeedRating,
-          keywords, labelColor, labelText, lens, metadata, metadataStatus, rating,
-          shutterSpeed, touchTime, treatment, widthCropped
+        Execute smart collections from Lightroom catalog or from a exported file.
+        Supported criteria are :
+            all, aperture, aspectRatio, camera, captureTime,  collection, colorMode, copyname, 
+            creator, exif, fileFormat, filename, flashFired, focalLength, folder, hasAdjustments,
+            hasGPSData, heightCropped, iptc, isoSpeedRating, keywords, labelColor, labelText,
+            lens, metadata, metadataStatus, rating, shutterSpeed, touchTime, treatment, widthCropped
 
         positional arguments:
-        smart_name            Name of smart(s) collection
+        smart_name            name of smart(s) collection. Can be lightroom smart collections (joker "%"),
+                                 or filenames (joker "*") with option --file",
 
         optional arguments:
         -h, --help            show this help message and exit
         -b LRCAT, --lrcat LRCAT
-                                Lightroom catalog file for database query
-                                (default:"I:\Lightroom\La Totale\La Totale.lrcat")
-        -f, --file            positional parameters are files, not smart collection
-                                names
-        -l, --list            List smart collections of name "smart_name" from
-                                Lightroom catalog. "smart_name" can include jokers
-                                "%". Leave empty for list all collections
-        --raw                 Display description of smart collection as stored
-        -d, --dict            Display description of smart collection as python
-                                dictionnary
-        -s, --sql             Display SQL query
-        -c, --count           Display count of results
-        -r, --results         Display query results
-        -n MAX_LINES, --max_lines MAX_LINES
-                                Max number of results to display
+                              Lightroom catalog file for database request
+                                (default:"C:\Users\Default\Documents\My Lightroom Catalog.lrcat")
+        -f, --file            positionnal parameters are files, not smart collection names
+        -l, --list            list smart collections of name "smart_name" from Lightroom catalog. 
+                                "smart_name" can include jokers "%".
+                                Leave empty for all collections
+        --raw                 display description of smart collection as stored
+        -d, --dict            display description of smart collection as python dictionnary
+        -s, --sql             display SQL request
+        -c, --count           display count of results
+        -r, --results         display datas results
+        -n MAX_LINES, --max-lines MAX_LINES
+                              max number of results to display
         -C COLUMNS, --columns COLUMNS
-                                Columns names to print (default:"uuid,name"). For
-                                column names, see help of lrselect.py
-        -N, --no_header       don't print header (columns names)
-        --raw_print           print raw value (for speed, aperture columns)
+                              columns names to print (default:"uuid,name").
+                                For column names, see help of lrselect.py.
+        -o SORT_COLUMN, --sort-column SORT_COLUMN
+                              name or number (one based) of column to sort (default:"1").
+                                 Sort is ascending order by default, add "-" before colum name or number for descending order
+        -N, --no-header       don't print header (columns names)
+        -w WIDTHS, --widths WIDTHS
+                              widths of columns to display (ex:30,-50,10)
+        -S SEPARATOR, --separator SEPARATOR
+                              separator string between columns (default:" | ")
+        --raw-print           print raw value (for speed, aperture columns)
         --log LOG             log to file
 

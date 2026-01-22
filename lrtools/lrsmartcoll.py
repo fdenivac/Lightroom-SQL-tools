@@ -691,13 +691,11 @@ class SQLSmartColl:
             "rf.absolutePath || fo.pathFromRoot",
         )
 
-
     def criteria_copyname(self):
         """
         criteria copyname
         """
         self.build_string_value("", "i.copyName")
-
 
     def build_string_value(self, tables_join, where_column):
         """
@@ -720,7 +718,9 @@ class SQLSmartColl:
                 f'operation unsupported: {self.func["operation"]} on criteria {self.func["criteria"]}'
             )
         if self.func["operation"] == "notEmpty":
-            self.sql += self._complete_sql(tables_join, f" WHERE {where_column} != ''")
+            self.sql += self._complete_sql(
+                tables_join, f" WHERE {where_column} != ''"
+            )
             return
         what, combine, test = rules[self.func["operation"]]
         _sql = ""
@@ -887,7 +887,15 @@ class SQLSmartColl:
         return smart_str
 
 
-def select_smart(config, lrdb, smart_name, columns, is_file=False, sql_only=False):
+def select_smart(
+    config,
+    lrdb,
+    smart_name,
+    columns,
+    sort_column=None,
+    is_file=False,
+    sql_only=False,
+):
     """
     Execute smart collection :
        build SQL string from lua source, execute and return rows
@@ -914,6 +922,12 @@ def select_smart(config, lrdb, smart_name, columns, is_file=False, sql_only=Fals
 
     builder = SQLSmartColl(config, lrdb, smart)
     sql = builder.build_sql(columns)
+    if sort_column is not None:
+        way = "ASC"
+        if sort_column[0] == "-":
+            way = "DESC"
+            sort_column = sort_column[1:]
+        sql += f" ORDER BY {sort_column} {way}"
     log.info("smart sql: %s", sql)
     if sql_only:
         return sql

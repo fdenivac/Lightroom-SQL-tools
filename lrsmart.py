@@ -46,14 +46,14 @@ def main():
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "smart_name",
-        help='Name of smart(s) collection. Can be lightroom smart collections (joker "%%"), or filenames (joker "*") with option "--file",',
+        help='name of smart(s) collection. Can be lightroom smart collections (joker "%%"), or filenames (joker "*") with option "--file",',
         nargs="*",
     )
     parser.add_argument(
         "-b",
         "--lrcat",
         default=config.default_lrcat,
-        help='Ligthroom catalog file for database request (default:"%(default)s")',
+        help='Lightroom catalog file for database request (default:"%(default)s")',
     )
     parser.add_argument(
         "-f",
@@ -65,55 +65,63 @@ def main():
         "-l",
         "--list",
         action="store_true",
-        help='List smart collections of name "smart_name" from Lightroom catalog.'
+        help='list smart collections of name "smart_name" from Lightroom catalog.'
         ' "smart_name" can include jokers "%%". Leave empty for all collections',
     )
     parser.add_argument(
         "--raw",
         action="store_true",
-        help="Display description of smart collection as stored",
+        help="display description of smart collection as stored",
     )
     parser.add_argument(
         "-d",
         "--dict",
         action="store_true",
-        help="Display description of smart collection as python dictionnary",
+        help="display description of smart collection as python dictionnary",
     )
     parser.add_argument(
-        "-s", "--sql", action="store_true", help="Display SQL request"
+        "-s", "--sql", action="store_true", help="display SQL request"
     )
     parser.add_argument(
-        "-c", "--count", action="store_true", help="Display count of results"
+        "-c", "--count", action="store_true", help="display count of results"
     )
+    parser.add_argument("--validation-file", default="", help=argparse.SUPPRESS)
     parser.add_argument(
-        "-r", "--results", action="store_true", help="Display datas results"
+        "-r", "--results", action="store_true", help="display datas results"
     )
     parser.add_argument(
         "-n",
-        "--max_lines",
+        "--max-lines",
         type=int,
         default=0,
-        help="Max number of results to display",
+        help="max number of results to display",
     )
     parser.add_argument(
         "-C",
         "--columns",
         default="uuid,name",
-        help='Columns names to print (default:"%(default)s").'
+        help='columns names to print (default:"%(default)s").'
         " For column names, see help of lrselect.py. "
         "(Note that to obtain a number of results identical to those obtained in LR,"
         " the uuid column must be present)",
     )
     parser.add_argument(
+        "-o",
+        "--sort-column",
+        default="1",
+        help='name or number (one based) of column to sort (default:"%(default)s").'
+        ' Sort is ascending order by default, add "-" before colum name or number for descending order',
+    )
+    parser.add_argument(
         "-N",
-        "--no_header",
+        "--no-header",
         action="store_true",
         help="don't print header (columns names)",
     )
     parser.add_argument(
         "-w",
         "--widths",
-        help="Widths of columns to display widths (ex:30,-50,10)",
+        help="widths of columns to display (ex:30,-50,10)",
     )
     parser.add_argument(
         "-S",
@@ -122,11 +130,11 @@ def main():
         help='separator string between columns (default:"%(default)s")',
     )
     parser.add_argument(
-        "--raw_print",
+        "--raw-print",
         action="store_true",
         help="print raw value (for speed, aperture columns)",
     )
-    parser.add_argument("--log", help="log on file")
+    parser.add_argument("--log", help="log to file")
 
     args = parser.parse_args()
     # --max_lines option implies --results
@@ -149,23 +157,22 @@ def main():
 
     #
     # for lrsmart validation :
-    #  a file containing photos number by smart collection, extracted  from Lightrrom (via specific plugin)
+    #  a file containing photos number by smart collection, extracted from Lightrrom (via specific plugin)
     #  can be loaded :
     #
     count_smart = {}
-    try:
-        lines = (
-            open("I:/Lightroom/SmartsCountFromLR.txt", encoding="utf8")
-            .read()
-            .splitlines()
-        )
-        for line in lines:
-            values = line.split("==>")
-            if not len(values) == 2:
-                continue
-            count_smart[values[0].strip()] = int(values[1].strip())
-    except IOError:
-        pass
+    if args.validation_file:
+        try:
+            lines = (
+                open(args.validation_file, encoding="utf8").read().splitlines()
+            )
+            for line in lines:
+                values = line.split("==>")
+                if not len(values) == 2:
+                    continue
+                count_smart[values[0].strip()] = int(values[1].strip())
+        except FileNotFoundError:
+            sys.exit("Validation file not found")
 
     # open catalog
     if not args.lrcat.endswith("lrcat"):
@@ -180,7 +187,7 @@ def main():
 
     if not args.file:
         # place for process joker '%'
-        colls = list()
+        colls = []
         for name in args.smart_name:
             colls += lrdb.select_collections(lrdb.SMART_COLL, name)
         args.smart_name = [name for _, name, _ in colls]
@@ -213,7 +220,6 @@ def main():
                 try:
                     smart = open(smart_name, "r", encoding="utf-8").read()
                     smart = smart[smart.find("{") :]
-                    # smart = smart[4:]
                     lua = SLPP()
                     smart = lua.decode(smart)
                     if not smart or "value" not in smart:
@@ -254,6 +260,13 @@ def main():
         except (LRSelectException, SmartException) as _e:
             print(" ==> FAILED : ", _e)
             continue
+        # add sort on column
+        sort_column = args.sort_column.strip()
+        way = "ASC"
+        if sort_column[0] == "-":
+            way = "DESC"
+            sort_column = sort_column[1:]
+        sql += f" ORDER BY {sort_column} {way}"
 
         if args.sql:
             print(" * SQL Request: ", sql)
