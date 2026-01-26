@@ -29,9 +29,9 @@ def square_around_location(lat, lon, width):
     )
 
 
-def geocodage(address, config):
+def geocodage(config, address):
     """
-    Simple call to geo.api.gouv.fr to retrieve coordinates from address
+    call to various services to retrieve coordinates from address
     """
     try:
         details = ""
