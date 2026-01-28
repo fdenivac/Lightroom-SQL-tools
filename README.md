@@ -231,6 +231,10 @@ It builds an SQL SELECT query from two strings describing informations to displa
                                     - town or coordinates, and bound in kilometer (ex:"paris+20", "45.7578;4.8320+10"),
                                     - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
                                     - a geolocalized Lightroom photo name (ex:"photo:NIK_10312")
+                - 'country'    : (str) country with optional jokers '%'
+                - 'state'      : (str) state with optional jokers '%'
+                - 'city'       : (str) city with optional jokers '%'
+                - 'location'   : (str) location with optional jokers '%'
                 - 'videos'     : (bool) type videos
                 - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
                 - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM

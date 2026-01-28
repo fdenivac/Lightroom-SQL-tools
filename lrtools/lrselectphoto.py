@@ -724,6 +724,38 @@ class LRSelectPhoto(LRSelectGeneric):
                     "%s",
                     self.func_exifindex,
                 ],
+                "country": [
+                    [
+                        "LEFT JOIN AgHarvestedIptcMetadata iptcmeta ON iptcmeta.image = i.id_local",
+                        "LEFT JOIN AgInternedIptcCountry iptccountry ON iptccountry.id_local = iptcmeta.countryRef",
+                    ],
+                    "iptccountry.value %s",
+                    self.func_like_value_or_null,
+                ],
+                "state": [
+                    [
+                        "LEFT JOIN AgHarvestedIptcMetadata iptcmeta ON iptcmeta.image = i.id_local",
+                        "LEFT JOIN AgInternedIptcState iptcstate ON iptcstate.id_local = iptcmeta.stateRef",
+                    ],
+                    "iptcstate.value %s",
+                    self.func_like_value_or_null,
+                ],
+                "city": [
+                    [
+                        "LEFT JOIN AgHarvestedIptcMetadata iptcmeta ON iptcmeta.image = i.id_local",
+                        "LEFT JOIN AgInternedIptcCity iptccity ON iptccity.id_local = iptcmeta.cityRef",
+                    ],
+                    "iptccity.value %s",
+                    self.func_like_value_or_null,
+                ],
+                "location": [
+                    [
+                        "LEFT JOIN AgHarvestedIptcMetadata iptcmeta ON iptcmeta.image = i.id_local",
+                        "LEFT JOIN AgInternedIptcLocation iptcloc ON iptcloc.id_local = iptcmeta.locationRef",
+                    ],
+                    "iptcloc.value %s",
+                    self.func_like_value_or_null,
+                ],
                 "sort": [
                     "",
                     "ORDER BY %s",
@@ -1071,10 +1103,10 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'pubcollection' : name of publish collection
             - 'pubtime'    : published datetime in seconds from 2001-1-1
             - 'pubposition': order number (float) in collection
-            - 'location'   : location name
-            - 'city'       : location city name
             - 'country'    : location country name
             - 'state'      : location state name
+            - 'city'       : location city name
+            - 'location'   : location name
             - 'duration'   : video duration in seconds
             - 'count(NAME)' : count not NULL value for column NAME (ex: "count(master)")
             - 'countby(NAME)' : count aggregated not NULL value for column NAME
@@ -1082,16 +1114,16 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'name'       : (str) filename without extension
             - 'exactname'  : (str) filename insensitive without extension
             - 'idfolder'   : (int) folder id
-            - 'folder'     : (str) folder name, with optional wildcard '%' (ex: folder=%family%)
+            - 'folder'     : (str) folder name, with optional jokers '%' (ex: folder=%family%)
             - 'ext'        : (str) file extension
             - 'id'         : (int) photo id (Adobe_images.id_local)
             - 'uuid'       : (string) photo UUID (Adobe_images.id_global)
             - 'rating'     : (str) [operator (<,<=,>,=, ...)] and rating/note (ex: "rating==5")
             - 'colorlabel' : (str) color and label. Color names are localized (Bleu, Rouge,...)
             - 'flag'       : (str) flag status : 'flagged', 'unflagged', 'rejected'. (ex: "flag=flagged")
-            - 'creator'    : (str) photo creator, with optional wildcard '%'
-            - 'copyright"  : (str) photo copyright with optional wildcard '%'
-            - 'caption'    : (true/false/str) photo caption, with optional wildcard '%'
+            - 'creator'    : (str) photo creator, with optional jokers '%'
+            - 'copyright"  : (str) photo copyright with optional jokers '%'
+            - 'caption'    : (true/false/str) photo caption, with optional jokers '%'
             - 'datecapt'   : (str) operator (<,<=,>, >=) and capture date
             - 'datemod'    : (str) operator (<,<=,>, >=) and lightroom modification date
             - 'modcount'   : (int) number of modifications
@@ -1100,9 +1132,9 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'aperture'   : (float) aperture lens with operators <,<=,>,>=,= (ex: "aperture=<=5.6")
             - 'speed'      : (float) speed shutter with operators <,<=,>,>=,= (ex: "speed=>=8")
             - 'flash'      : (0|1|null) flash use : 0=not used, 1=fired, null=unknown (ex: flash=1)
-            - 'camera'     : (str) camera name, with optional wildcard '%' (ex:"camera=canon%")
+            - 'camera'     : (str) camera name, with optional jokers '%' (ex:"camera=canon%")
             - 'camerasn'   : (str) camera serial number
-            - 'lens'       : (str) lens name, with optional wildcard '%' (ex:"lens=%300%")
+            - 'lens'       : (str) lens name, with optional jokers '%' (ex:"lens=%300%")
             - 'monochrome' : (bool) monochrome (ex="monochrome=1")
             - 'width'      : (int) cropped image width. Need to include column "dims"
             - 'height      : (int) cropped image height. Need to include column "dims"
@@ -1112,6 +1144,10 @@ class LRSelectPhoto(LRSelectGeneric):
                                 - town or coordinates, and bound in kilometer (ex:"paris+20", "45.7578;4.8320+10"),
                                 - 2 towns or coordinates (ex: "grenoble/lyon", "44.84;-0.58/43.63;1.38")
                                 - a geolocalized Lightroom photo name (ex:"photo:NIK_10312")
+            - 'country'    : (str) country with optional jokers '%'
+            - 'state'      : (str) state with optional jokers '%'
+            - 'city'       : (str) city with optional jokers '%'
+            - 'location'   : (str) location with optional jokers '%'
             - 'videos'     : (bool) type videos
             - 'exifindex'  : search words in exif (AgMetadataSearchIndex). Use '&' for AND words '|' for OR. ex: "exifindex=%Lowy%&%blanko%"
             - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
