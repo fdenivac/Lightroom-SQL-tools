@@ -56,6 +56,9 @@ Modify the config file *lrtools.ini*:
     display_results(rows, columns, header=True)
 
 </br>
+
+For a complete API usage, see [LrViewer project](https://github.com/fdenivac/LrViewer) : a lightroom viewer without lightroom.
+</br>
 </br>
 
 ## Using **lrselect** script
@@ -66,7 +69,7 @@ It builds an SQL SELECT query from two strings describing informations to displa
     ``usage: lrselect.py [OPTIONS] columns criteria``
 
 * Options for display sql query, result count, partial results
-* Wildcards "%" can be used in criterion of type string (ex:name=%ab%)
+* Jokers "%" can be used in criterion of type string (ex:name=%ab%)
 * Criteria are combined with AND (the comma character ","), OR (the vertical line character "|" ) and parenthesis operators
 * Allows repeats of the same criterion (ex: "datecapt=>=1-5-2016, datecapt=<=1-9-2018, keyword=sea, keyword=tree")
 
