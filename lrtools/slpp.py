@@ -208,8 +208,6 @@ class SLPP:
             if not self.ch or not self.ch.isdigit():
                 log.error("Malformed number (no digits after decimal point)")
                 return n + "0"
-            else:
-                n += self.ch
             while self.ch and self.ch.isdigit():
                 n += self.ch
                 self.next_chr()
