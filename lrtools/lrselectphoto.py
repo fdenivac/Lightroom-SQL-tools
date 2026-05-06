@@ -123,6 +123,22 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                 },
                 "vname": {"True": ["i.copyName AS vname", None]},
+                "uuidfile": {
+                    "True": [
+                        "fi.id_global",
+                        [
+                            "LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local",
+                        ],
+                    ],
+                },
+                "modtime": {
+                    "True": [
+                        "fi.modtime",
+                        [
+                            "LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local",
+                        ],
+                    ],
+                },
                 "idfolder": {
                     "True": [
                         "fo.id_local AS idfolder",
@@ -286,6 +302,24 @@ class LRSelectPhoto(LRSelectGeneric):
                         ],
                     ]
                 },
+                "cropwidth": {
+                    "True": [
+                        "ids.croppedWidth AS cropwidth",
+                        [
+                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                        ],
+                    ]
+                },
+                "cropheight": {
+                    "True": [
+                        "ids.croppedHeight AS cropheight",
+                        [
+                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                        ],
+                    ]
+                },
+                "width": {"True": ["i.fileWidth AS width", None]},
+                "height": {"True": ["i.fileHeight AS height", None]},
                 "dims": {
                     "True": [
                         "(SELECT CASE "
@@ -434,6 +468,14 @@ class LRSelectPhoto(LRSelectGeneric):
                         ],
                     ]
                 },
+                "digest": {
+                    "True": [
+                        "ids.digest AS digest",
+                        [
+                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                        ],
+                    ]
+                },
             },
             #
             # Criteria description
@@ -482,6 +524,12 @@ class LRSelectPhoto(LRSelectGeneric):
                 "uuid": [
                     "",
                     'i.id_global = "%s"',
+                ],
+                "uuidfile": [
+                    [
+                        "LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local",
+                    ],
+                    'fi.id_global = "%s"',
                 ],
                 "datecapt": [
                     "",
