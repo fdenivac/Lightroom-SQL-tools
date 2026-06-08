@@ -1097,9 +1097,10 @@ class LRSelectPhoto(LRSelectGeneric):
             return self.lrdb.select_count_by_date(
                 mode, dt_from, dt_to, sql=True
             )
-        match = re.match(r"duplicated_names(.+)", columns)
+        match = re.match(r"duplicated_names\((.*)\)", columns)
         if match:
-            return self.lrdb.select_duplicates(sql=True)
+            value = match.group(1)
+            return self.lrdb.select_duplicates(value, sql=True)
         return None
 
     def select_generic(self, columns, criters="", **kwargs):

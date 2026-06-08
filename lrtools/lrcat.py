@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable=line-too-long, C0326, unused-variable, invalid-name, too-many-lines
+# pylint: disable=line-too-long, unused-variable, invalid-name, too-many-lines
 """
 Main class LRCatDB for Lightroom database manipulations
 
 """
+
 import os
 import sqlite3
 import logging
 from datetime import datetime, timezone
 from dateutil import parser
+import re
 import tzlocal
 import pytz
 
@@ -21,6 +23,30 @@ log = logging.getLogger(__name__)
 LIGHTROOM_EPOCH = datetime(2001, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 # unix timestamp for LR epoch (2001,1,1,0,0,0)
 TIMESTAMP_LR_EPOCH = 978307200
+
+SELECT_DUPLICATES_COUNT = """
+SELECT * FROM (
+  SELECT rf.absolutePath || fo.pathFromRoot || fi.baseName || "." || fi.extension as name, count( fi.baseName) AS duplicates
+  FROM Adobe_images i
+  JOIN AgLibraryFile fi on i.rootFile = fi.id_local
+  JOIN AgLibraryFolder fo on fi.folder = fo.id_local
+  JOIN AgLibraryRootFolder rf on fo.rootFolder = rf.id_local
+  WHERE i.MasterImage IS NULL
+  AND i.fileFormat != "VIDEO"
+  GROUP BY UPPER(fi.baseName))
+WHERE duplicates >1
+"""
+SELECT_DUPLICATES_UUID = """
+SELECT  i.id_global AS uuid, fi.baseName || COALESCE(i.copyName, "") || "." || fi.extension AS name FROM Adobe_images i LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local WHERE UPPER(fi.baseName || COALESCE(i.copyName, "") || "." || fi.extension)
+IN
+  (
+  SELECT fi.baseName || COALESCE(i.copyName, "") || "." || fi.extension AS name
+  FROM Adobe_images i
+  LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local %s
+  GROUP BY name HAVING count(fi.baseName||COALESCE(i.copyName,"")||"."||fi.extension)>1
+  )
+ORDER BY name
+"""
 
 
 def date_to_lrstamp(config, mydate, localtz=True):
@@ -90,7 +116,10 @@ class LRCatDB:
     SMART_COLL = 3
 
     def __init__(
-        self, config, lrcat_file, open_options="mode=ro&cache=private&immutable=1"
+        self,
+        config,
+        lrcat_file,
+        open_options="mode=ro&cache=private&immutable=1",
     ):
         self.config = config
         self.conn = self.cursor = self.lrdb_version = None
@@ -116,8 +145,7 @@ class LRCatDB:
 
         self.lrcat_file = lrcat_file
         if not os.path.exists(self.lrcat_file):
-            raise LRCatException("LR catalog doesn't exist: %s" % (
-                self.lrcat_file))
+            raise LRCatException(f"LR catalog doesn't exist: {self.lrcat_file}")
         log.info(
             "sqlite3 binding version : %s , sqlite3 version : %s",
             sqlite3.version,
@@ -160,21 +188,33 @@ class LRCatDB:
         self.cursor.execute(sql)
         return self.cursor
 
-    def select_duplicates(self, **kwargs):
+    def select_duplicates(self, options, **kwargs):
         """
-        Returns duplicates photos name (same basename) :
-            ( (fullname, number_copies), ...)
+        Returns duplicates photos name :
+
+            - format 1 : same base name (without extension)
+                ( (fullname, number_copies), ...)
+            - format 2 :
+                ( (uuid, UPPER(base name with extension)), ...)
         """
-        sql = 'SELECT * FROM ( \
-            SELECT rf.absolutePath || fo.pathFromRoot || fi.baseName || "." || fi.extension as name, count( fi.baseName) AS duplicates \
-            FROM Adobe_images i \
-            JOIN AgLibraryFile fi on i.rootFile = fi.id_local \
-            JOIN AgLibraryFolder fo on fi.folder = fo.id_local \
-            JOIN AgLibraryRootFolder rf on fo.rootFolder = rf.id_local \
-            WHERE i.MasterImage IS NULL \
-            AND i.fileFormat != "VIDEO" \
-            GROUP BY UPPER(fi.baseName)) \
-            WHERE duplicates >1'
+        if not options:
+            sql = SELECT_DUPLICATES_COUNT
+        elif options == "1":
+            sql = SELECT_DUPLICATES_COUNT
+        else:
+            match = re.match(r"2 *,* *(.+)*", options)
+            if match:
+                options = match.group(1)
+                if not options:
+                    sql = SELECT_DUPLICATES_UUID % ""
+                elif options == "novideos":
+                    sql = (
+                        SELECT_DUPLICATES_UUID % 'WHERE i.fileFormat != "VIDEO"'
+                    )
+                else:
+                    raise LRCatException("Invalid format")
+            else:
+                raise LRCatException("Invalid format")
         if kwargs.get("sql"):
             return sql
         self.cursor.execute(sql)
