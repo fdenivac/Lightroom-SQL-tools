@@ -96,6 +96,11 @@ def display_flag(value):
     return dflags[int(value)]
 
 
+def display_int(value):
+    """format integer value"""
+    return int(value)
+
+
 def seconds_tostring(seconds, **kwargs):
     """
     convert seconds to string
@@ -129,16 +134,16 @@ DEFAULT_SPECS = {
     "name=basext": ("%-25s", None),
     "id": ("%8s", None),
     "uuid": ("%38s", None),
-    "rating": ("%1s", None),
+    "rating": ("%1s", display_int),
     "colorlabel": ("%8s", None),
     "flag": ("%6s", display_flag),
     "datemod": ("%19s", display_lrtimestamp),
     "datehist": ("%19s", display_lrtimestamp),
     "datecapt": ("%19s", display_date),
-    "modcount": ("%2s", None),
+    "modcount": ("%2s", display_int),
     "master": ("%10s", None),
     "vname": ("%10s", None),
-    "stackpos": ("%3s", None),
+    "stackpos": ("%3s", display_int),
     "keywords": ("%-30s", display_keywords),
     "collections": ("%-30s", None),
     "camera": ("%-15s", None),
