@@ -24,6 +24,8 @@ def criteria_to_dict(criteria: str) -> dict:
     dcriteria = {}
     for crit in criteria.split(","):
         crit = crit.strip()
+        if not crit:
+            continue
         try:
             key, val = crit.split("=", 1)
             key = key.lower()
@@ -131,9 +133,9 @@ class LRSelectPhoto(LRSelectGeneric):
                         ],
                     ],
                 },
-                "modtime": {
+                "datefile": {
                     "True": [
-                        "fi.modtime",
+                        "fi.modtime AS datefile",
                         [
                             "LEFT JOIN AgLibraryFile fi ON i.rootFile = fi.id_local",
                         ],
@@ -203,10 +205,22 @@ class LRSelectPhoto(LRSelectGeneric):
                         ],
                     ]
                 },
+                "haskeyword": {
+                    "True": [
+                        " CASE WHEN EXISTS (SELECT 1 FROM AgLibraryKeywordImage ki WHERE ki.image = i.id_local) THEN 1 ELSE 0 END AS haskeyword",
+                        None,
+                    ]
+                },
                 "keywords": {
                     "True": [
                         "(SELECT GROUP_CONCAT(kwdef.name) FROM AgLibraryKeywordImage kwimg JOIN AgLibraryKeyword kwdef ON kwdef.id_local = kwimg.tag"
                         " WHERE kwimg.image=i.id_local) AS keywords",
+                        None,
+                    ]
+                },
+                "hascollection": {
+                    "True": [
+                        " CASE WHEN EXISTS (SELECT 1 FROM AgLibraryCollectionImage ci WHERE ci.image = i.id_local) THEN 1 ELSE 0 END AS hascollection",
                         None,
                     ]
                 },
@@ -290,7 +304,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     "True": [
                         "ids.grayscale AS grayscale",
                         [
-                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                            "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local"
                         ],
                     ]
                 },
@@ -306,7 +320,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     "True": [
                         "ids.croppedWidth AS cropwidth",
                         [
-                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                            "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local"
                         ],
                     ]
                 },
@@ -314,7 +328,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     "True": [
                         "ids.croppedHeight AS cropheight",
                         [
-                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                            "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local"
                         ],
                     ]
                 },
@@ -472,7 +486,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     "True": [
                         "ids.digest AS digest",
                         [
-                            "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                            "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local"
                         ],
                     ]
                 },
@@ -672,7 +686,7 @@ class LRSelectPhoto(LRSelectGeneric):
                 ],
                 "grayscale": [
                     [
-                        "LEFT JOIN Adobe_ImageDevelopSettings ids ON ids.image = i.id_local"
+                        "LEFT JOIN Adobe_imageDevelopSettings ids ON ids.image = i.id_local"
                     ],
                     "ids.grayscale = %s",
                     self.func_0_1,
@@ -704,6 +718,11 @@ class LRSelectPhoto(LRSelectGeneric):
                         " LEFT JOIN AgLibraryCollection col ON col.id_local = ci.Collection",
                     ],
                     "col.id_local = %s",
+                ],
+                "hascollection": [
+                    "",
+                    "%s EXISTS (SELECT 1 FROM AgLibraryCollectionImage ci WHERE ci.image = i.id_local)",
+                    self.func_not,
                 ],
                 "collection": [
                     [
@@ -755,17 +774,17 @@ class LRSelectPhoto(LRSelectGeneric):
                     ],
                     "kw.id_local = %s",
                 ],
+                "haskeyword": [
+                    "",
+                    "%s EXISTS (SELECT 1 FROM AgLibraryKeywordImage kwi WHERE kwi.image = i.id_local)",
+                    self.func_not,
+                ],
                 "keyword": [
                     [
                         "LEFT JOIN AgLibraryKeywordImage kwi<NUM> ON i.id_local = kwi<NUM>.image",
                         " LEFT JOIN AgLibraryKeyword kw<NUM> ON kw<NUM>.id_local = kwi<NUM>.tag",
                     ],
                     'kw<NUM>.name LIKE "%s"',
-                ],
-                "haskeywords": [
-                    "",
-                    "%s",
-                    self.func_haskeywords,
                 ],
                 "exifindex": [
                     "LEFT JOIN AgMetadataSearchIndex msi ON i.id_local = msi.image",
@@ -926,22 +945,6 @@ class LRSelectPhoto(LRSelectGeneric):
         except ValueError as _e:
             raise LRSelectException(_e) from _e
         return value
-
-    def func_haskeywords(self, value):
-        """
-        select photos with or without keywords
-        """
-        if value in ["True", "1"]:
-            return "i.id_local IN (SELECT DISTINCT kwi.image FROM AgLibraryKeywordImage kwi)"
-        if value in ["False", "0"]:
-            self._add_from(
-                [
-                    "LEFT JOIN AgLibraryKeywordImage kwi1 ON i.id_local = kwi1.image"
-                ],
-                self.froms,
-            )
-            return "kwi1.image IS NULL"
-        raise LRSelectException("invalid haskeywords value")
 
     def func_gps(self, value):
         """
@@ -1114,6 +1117,7 @@ class LRSelectPhoto(LRSelectGeneric):
                 'base_vc' : base name + virtual copy name, ex: "IMG_1101 Copy 1"
                 'basext_vc': base name + virtual copy name + extension, ex: "IMG_1101 Copy 1.jpg"
                 'full_vc' :  path + base name + virtual copy name + extension, ex: "D:\\Photos\\IMG_1101 Copy 1.jpg"
+            - 'datefile'   : photo file datetime
             - 'idfolder'   : folder id
             - 'folder'     : folder name
             - 'id'         : id photo (Adobe_images.id_local)
@@ -1129,7 +1133,9 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'vname'      : virtual copy name
             - 'stackpos'   : position in stack
             - 'stack'      : stack identifier
+            - 'haskeyword ': True if photo has one keyword or more
             - 'keywords'   : keywords list
+            - 'hascollection': True if photo belongs to a collection
             - 'collections': collections list
             - 'exif'       : 'var:SQLCOLUMN' : display column in table AgHarvestedExifMetadata. Ex: "exif=var:hasgps"
             - 'extfile'    : extension of an external/extension file (jpg,xmp,...)
@@ -1143,6 +1149,7 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'speed'      : speed shutter
             - 'monochrome' : monochrome image when = 1
             - 'flash'      : flash use ("0" = not used, "1" = used, "" = unknown)
+            - 'hasgps'     : has GPS datas
             - 'latitude'   : GPS latitude
             - 'longitude'  : GPS longitude
             - 'creator'    : photo creator
@@ -1202,7 +1209,7 @@ class LRSelectPhoto(LRSelectGeneric):
             - 'vcopies'    : 'NULL'|'!NULL'|'<NUM>' : all, none virtual copies or copies for a master image NUM
             - 'idkeyword'  : (int) keyword id
             - 'keyword'    : (str) keyword name.
-            - 'haskeywords': (bool) photos with or without keywords
+            - 'haskeyword' : (bool) photos with or without keywords
             - 'import'     : (int) import id
             - 'stacks'     : operation on stacks in :
                     'yes'    = photos in a stack
@@ -1218,6 +1225,7 @@ class LRSelectPhoto(LRSelectGeneric):
                     'uptodate' = uptodate, in error, or to write on disk
                     'unknown' = write error, phot missing ...
             - 'idcollection' : (int) collection id
+            - 'hascollection': (bool) photos appears or not in one or more collection
             - 'collection' : (str) collection name
             - 'idpubcollection' : (int) publish collection id
             - 'pubcollection: (str) publish collection name

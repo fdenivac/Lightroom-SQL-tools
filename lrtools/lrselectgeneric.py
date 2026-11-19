@@ -222,11 +222,18 @@ class LRSelectGeneric:
         except LRSelectException:
             return ("=", f'"{value}"')
 
+    def func_not(self, value):
+        """value is boolean, return '' or 'NOT'"""
+        value = to_bool(value)
+        if value:
+            return ""
+        return "NOT"
+
     def _keyval_to_keys(self, strlist):
         """
         convert string of key=value in list of dict
         """
-        pairs = list()
+        pairs = []
         if not strlist:
             return pairs
         for keyval in strlist.split(","):
@@ -284,9 +291,7 @@ class LRSelectGeneric:
             key, value = list(column.items())[0]
             try:
                 dvalues = self.column_description[key]
-                if self._VAR_FIELD in dvalues and value.startswith(
-                    self._VAR_FIELD
-                ):
+                if self._VAR_FIELD in dvalues and value.startswith(self._VAR_FIELD):
                     # _VAR_FIELD introduces process for columns name specification
                     _, from_sql = dvalues[self._VAR_FIELD]
                     col_sql = self.remove_quotes(value[len(self._VAR_FIELD) :])
@@ -454,9 +459,7 @@ class LRSelectGeneric:
             if _from:
                 if isinstance(_from, str):
                     _from = [_from]
-                _from = [
-                    _f.replace("<NUM>", f"{nb_wheres[key]}") for _f in _from
-                ]
+                _from = [_f.replace("<NUM>", f"{nb_wheres[key]}") for _f in _from]
                 self._add_from(_from, self.froms)
             _where = _where.replace("<NUM>", f"{nb_wheres[key]}")
             if "%s" in _where:
@@ -499,9 +502,7 @@ class LRSelectGeneric:
             select_type = "SELECT"
 
         having = (
-            f"HAVING {' AND '.join(self.having_criters)}"
-            if self.having_criters
-            else ""
+            f"HAVING {' AND '.join(self.having_criters)}" if self.having_criters else ""
         )
 
         sql = f"{select_type}  {fields} {self.froms} {wheres} {self.groupby} {having} {sort}"

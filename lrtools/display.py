@@ -78,6 +78,8 @@ def display_date(value):
 
 def display_lrtimestamp(value):
     """format LR timestamp (2001 based)"""
+    if value in [0, 978307200]:
+        return ""
     utc = pytz.utc.localize(
         datetime(2001, 1, 1, 0, 0, 0) + timedelta(seconds=float(value))
     )
@@ -141,10 +143,13 @@ DEFAULT_SPECS = {
     "datehist": ("%19s", display_lrtimestamp),
     "datecapt": ("%19s", display_date),
     "modcount": ("%2s", display_int),
+    "datefile": ("%19s", display_lrtimestamp),
     "master": ("%10s", None),
     "vname": ("%10s", None),
     "stackpos": ("%3s", display_int),
+    "haskeyword": ("%3s", display_boolean),
     "keywords": ("%-30s", display_keywords),
+    "hascollection": ("%3s", display_boolean),
     "collections": ("%-30s", None),
     "camera": ("%-15s", None),
     "camerasn": ("%-8s", None),
@@ -158,9 +163,14 @@ DEFAULT_SPECS = {
     "creator": ("%-18s", None),
     "caption": ("%-30s", None),
     "dims": ("%-10s", None),
+    "width": ("%-5s", None),
+    "height": ("%-5s", None),
+    "cropwidth": ("%-5s", None),
+    "cropheight": ("%-5s", None),
     "pubcollection": ("%30s", None),
     "pubname": ("%30s", None),
     "pubtime": ("%19s", display_lrtimestamp),
+    "hasgps": ("%3s", display_boolean),
     "latitude": ("%-18s", None),
     "longitude": ("%-18s", None),
     "duration": ("%5s", display_duration),
