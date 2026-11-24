@@ -19,7 +19,7 @@ maintainers = [
 ]
 license-files = ["LICENSE"]
 dependencies = [
-    "geopy>=2.3.0",
+    "geopy>=2.5.0",
     "pytz>=2023.3",
     "tzlocal>=5.0.1",
     "python-dateutil>=2.8.2",
