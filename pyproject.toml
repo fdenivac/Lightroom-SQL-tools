@@ -1,0 +1,45 @@
+#
+# pyproject.toml for lrtools package
+#
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lrtools"
+dynamic = ["version", "readme"]
+requires-python = ">=3.10"
+description = "Retrieve photo data from Adobe Lightroom catalog"
+authors = [
+    { name = "fdenivac", email = "fdenivac@gmail.com" }
+]
+maintainers = [
+    {name = "fdenivac", email = "fdenivac@gmail.com"}
+]
+license-files = ["LICENSE"]
+dependencies = [
+    "geopy>=2.3.0",
+    "pytz>=2023.3",
+    "tzlocal>=5.0.1",
+    "python-dateutil>=2.8.2",
+]
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Multimedia :: Graphics",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "lrtools._version.__version__"}
+readme = {file = ["README.md"]}
+
+
+[project.scripts]
+lrselect = "lrtools.scripts.lrselect:main"
+lrsmart = "lrtools.scripts.lrsmart:main"
+
+

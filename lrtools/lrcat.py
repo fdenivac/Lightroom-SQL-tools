@@ -146,11 +146,7 @@ class LRCatDB:
         self.lrcat_file = lrcat_file
         if not os.path.exists(self.lrcat_file):
             raise LRCatException(f"LR catalog doesn't exist: {self.lrcat_file}")
-        log.info(
-            "sqlite3 binding version : %s , sqlite3 version : %s",
-            sqlite3.version,
-            sqlite3.sqlite_version,
-        )
+        log.info("sqlite3 version : %s", sqlite3.sqlite_version)
         modes = f"?{open_options if open_options else ''}"
         done, reason = open_db(f"file:{self.lrcat_file}{modes}")
         if not done:
